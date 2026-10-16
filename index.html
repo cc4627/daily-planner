@@ -489,6 +489,7 @@ function renderWeek() {
   for (let i = 0; i < 7; i++) {
     const d = addDays(start, i);
     blocksOn(d).forEach(b => {
+      if (b.cat === 'other') return; // driving, meals and breaks aren't goals
       planned[b.cat] = (planned[b.cat] || 0) + dur(b);
       if (isDone(b, d)) {
         done[b.cat] = (done[b.cat] || 0) + doneMins(b, d);
@@ -507,7 +508,7 @@ function renderWeek() {
   const missed = {}, days = [];
   for (let i = 0; i < 7; i++) {
     const d = addDays(start, i), bl = blocksOn(d);
-    bl.forEach(b => { if (isMissed(b, d)) missed[b.cat] = (missed[b.cat] || 0) + dur(b); });
+    bl.forEach(b => { if (b.cat !== 'other' && isMissed(b, d)) missed[b.cat] = (missed[b.cat] || 0) + dur(b); });
     if (bl.length) days.push([d, bl]);
   }
   const sum = o => Object.values(o).reduce((a, b) => a + b, 0);
