@@ -84,6 +84,16 @@ header .sub { display: block; font-size: 14px; font-weight: 500; color: var(--mu
 .item .bar { width: 4px; align-self: stretch; border-radius: 2px; flex: none; }
 .item .it { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
 .item .it small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.scale button, .chips button { padding: 10px 0; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-weight: 600; font-size: 15px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { padding: 8px 12px; font-size: 14px; }
+.scale button.on, .chips button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.scale-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.scorebox { display: flex; align-items: center; gap: 14px; background: var(--accent-soft); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; }
+.scorebox b { font-size: 30px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.scorebox span { font-size: 13px; color: var(--muted); }
+.tag.score { color: var(--accent); }
 .gap { font-size: 13px; color: var(--muted); text-align: center; padding: 2px 0; }
 
 .empty { text-align: center; color: var(--muted); padding: 48px 24px; }
@@ -158,6 +168,7 @@ nav.tabs button.on { color: var(--accent); }
     <div class="card"><h2>Planned hours vs. weekly goal</h2><div id="weekBars"></div>
       <p class="hint">Tap a goal number to change it.</p></div>
     <div class="card"><h2>Projected vs achieved</h2><div id="weekDone"></div></div>
+    <div class="card"><h2>Session scores</h2><div id="weekScores"></div></div>
     <div class="card"><h2>Check off this week</h2><div id="weekList"></div></div>
     <div class="card"><h2>Backup</h2>
       <p class="hint">Your plan is saved on this device only. Export a backup now and then so you don't lose it.</p>
@@ -193,8 +204,21 @@ nav.tabs button.on { color: var(--accent); }
     <div class="field hidden" id="daysField"><label>On these days</label><div class="days7" id="daysSeg"></div></div>
     <div class="field"><label for="fNotes">Notes</label><textarea id="fNotes" placeholder="Room, chapter, workout, shift details…"></textarea></div>
     <button class="btn primary" type="submit">Save</button>
+    <button class="btn hidden" type="button" id="rateBtn">Review this session</button>
     <button class="btn danger hidden" type="button" id="skipBtn">Skip just this day</button>
     <button class="btn danger hidden" type="button" id="delBtn">Delete</button>
+  </form>
+</div>
+<div id="reviewWrap">
+  <div class="sheet-bg" id="reviewBg"></div>
+  <form class="sheet" id="review" autocomplete="off">
+    <div class="grabber"></div>
+    <h3 id="rvTitle">How did it go?</h3>
+    <div class="scorebox"><b id="rvScore">–</b><span>Productivity score out of 10.<br>Updates as you answer.</span></div>
+    <div id="rvQuestions"></div>
+    <div class="field"><label for="rvNotes">Notes (optional)</label><textarea id="rvNotes" placeholder="What went well, what to change next time…"></textarea></div>
+    <button class="btn primary" type="submit">Save review</button>
+    <button class="btn" type="button" id="rvSkip">Skip review</button>
   </form>
 </div>
 <div class="toast" id="toast"></div>
@@ -262,9 +286,81 @@ function isMissed(b, date) {
 const stateOf = (b, date) => isDone(b, date) ? 'done' : isMissed(b, date) ? 'missed' : '';
 function toggleDone(id, date) {
   const b = state.blocks.find(x => x.id === id); if (!b) return;
-  b.done = isDone(b, date) ? b.done.filter(d => d !== date) : [...(b.done || []), date];
+  const was = isDone(b, date);
+  b.done = was ? b.done.filter(d => d !== date) : [...(b.done || []), date];
+  if (was && b.reviews) delete b.reviews[date];
   save(); render();
+  if (!was && REVIEWED.includes(b.cat)) openReview(b, date);
 }
+
+// ---- session reviews (study and gym) ----
+const REVIEWED = ['study', 'gym'];
+const MINS = [0, 5, 10, 15, 30, 45, 60];
+const QUESTIONS = {
+  study: [
+    { k: 'effect', q: 'How effective was it?', type: 'scale', lo: 'Got nothing done', hi: 'Nailed it' },
+    { k: 'intensity', q: 'How hard did you work?', type: 'scale', lo: 'Barely trying', hi: 'Locked in' },
+    { k: 'phone', q: 'Phone usage', type: 'chips', opts: [['away', 'Phone away'], ['few', 'Checked it a few times'], ['lot', 'On it a lot']] },
+    { k: 'scroll', q: 'Time spent doom scrolling', type: 'mins' },
+    { k: 'wasted', q: 'Other time wasted (breaks that ran long, daydreaming…)', type: 'mins' },
+  ],
+  gym: [
+    { k: 'intensity', q: 'How intense was it?', type: 'scale', lo: 'Very easy', hi: 'All out' },
+    { k: 'effect', q: 'How effective was it?', type: 'scale', lo: 'Wasted trip', hi: 'Great session' },
+    { k: 'wasted', q: 'Time wasted (on your phone, chatting, waiting…)', type: 'mins' },
+  ],
+};
+// 60% how well it went (effectiveness + intensity), 40% share of the session not wasted,
+// minus up to 1.5 for phone use on study sessions. Rounded to the nearest half point.
+function scoreOf(cat, r, minutes) {
+  if (!r.effect || !r.intensity) return null;
+  const quality = (r.effect - 1 + r.intensity - 1) / 8;
+  const lost = (r.scroll || 0) + (r.wasted || 0);
+  const kept = Math.max(0, 1 - lost / Math.max(minutes, 1));
+  const phone = cat === 'study' ? ({ away: 0, few: 0.5, lot: 1.5 }[r.phone] || 0) : 0;
+  const s = 10 * (0.6 * quality + 0.4 * kept) - phone;
+  return Math.max(0, Math.min(10, Math.round(s * 2) / 2));
+}
+const reviewOf = (b, date) => b.reviews && b.reviews[date];
+
+let rv = null; // { id, date, answers }
+function openReview(b, date) {
+  rv = { id: b.id, date, answers: { ...(reviewOf(b, date) || {}) } };
+  $('#rvTitle').textContent = `${CATS[b.cat].icon} How was ${b.title}?`;
+  $('#rvNotes').value = rv.answers.notes || '';
+  renderReview();
+  $('#reviewWrap').classList.add('open');
+}
+function closeReview() { $('#reviewWrap').classList.remove('open'); rv = null; }
+function renderReview() {
+  const b = state.blocks.find(x => x.id === rv.id), a = rv.answers;
+  $('#rvQuestions').innerHTML = QUESTIONS[b.cat].map(q => {
+    let ctl;
+    if (q.type === 'scale') ctl = `<div class="scale">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-k="${q.k}" data-v="${n}" class="${a[q.k] === n ? 'on' : ''}">${n}</button>`).join('')}</div>
+      <div class="scale-ends"><span>${q.lo}</span><span>${q.hi}</span></div>`;
+    else if (q.type === 'mins') ctl = `<div class="chips">${MINS.map(n => `<button type="button" data-k="${q.k}" data-v="${n}" class="${a[q.k] === n ? 'on' : ''}">${n === 60 ? '60+' : n} min</button>`).join('')}</div>`;
+    else ctl = `<div class="chips">${q.opts.map(([v, l]) => `<button type="button" data-k="${q.k}" data-s="${v}" class="${a[q.k] === v ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+    return `<div class="field"><label>${q.q}</label>${ctl}</div>`;
+  }).join('');
+  const sc = scoreOf(b.cat, a, dur(b));
+  $('#rvScore').textContent = sc === null ? '–' : sc;
+}
+$('#rvQuestions').onclick = e => {
+  const t = e.target.closest('[data-k]'); if (!t) return;
+  rv.answers[t.dataset.k] = t.dataset.s !== undefined ? t.dataset.s : +t.dataset.v;
+  renderReview();
+};
+$('#review').onsubmit = e => {
+  e.preventDefault();
+  const b = state.blocks.find(x => x.id === rv.id), a = rv.answers;
+  const sc = scoreOf(b.cat, a, dur(b));
+  if (sc === null) return toast('Rate effectiveness and intensity first');
+  a.notes = $('#rvNotes').value.trim(); a.score = sc;
+  b.reviews = { ...(b.reviews || {}), [rv.date]: a };
+  save(); closeReview(); render(); toast(`Saved · ${sc}/10`);
+};
+$('#rvSkip').onclick = closeReview;
+$('#reviewBg').onclick = closeReview;
 
 // ---- rendering ----
 function render() {
@@ -316,7 +412,7 @@ function renderDay() {
         ${b.notes ? `<div class="notes">${esc(b.notes)}</div>` : ''}
         <div class="tags">${b.repeat === 'weekly' ? '<span class="tag" style="color:var(--muted)">↻ weekly</span>' : ''}
           ${isNow ? '<span class="tag now">● now</span>' : ''}${clash ? '<span class="tag warn">⚠ overlaps</span>' : ''}
-          ${done ? '<span class="tag ok">✓ achieved</span>' : st === 'missed' ? '<span class="tag miss">not checked off</span>' : ''}</div>
+          ${done && reviewOf(b, sel) ? `<span class="tag score">★ ${reviewOf(b, sel).score}/10</span>` : ''}${done ? '<span class="tag ok">✓ achieved</span>' : st === 'missed' ? '<span class="tag miss">not checked off</span>' : ''}</div>
       </div>
       <button class="check" data-check="${b.id}" aria-label="Mark done">${done ? '✓' : ''}</button></div>`;
     prevEnd = Math.max(prevEnd ?? 0, e);
@@ -362,11 +458,23 @@ function renderWeek() {
       <span class="val">${fmtHours(dn)} / ${fmtHours(tot)}</span></div>
     <div class="legend"><span style="--c:var(--ok)">Achieved</span><span style="--c:var(--miss)">Not checked off</span><span style="--c:var(--line)">Still to come</span></div>
     <p class="hint">You've achieved ${fmtHours(dn)} of the ${fmtHours(tot)} you projected this week (${Math.round(pct(dn, tot))}%).</p>`;
+  const rs = { study: [], gym: [] };
+  days.forEach(([d, bl]) => bl.forEach(b => { const r = reviewOf(b, d); if (r && rs[b.cat] && isDone(b, d)) rs[b.cat].push(r); }));
+  const avg = a => a.length ? Math.round(a.reduce((x, r) => x + r.score, 0) / a.length * 10) / 10 : null;
+  const totalMin = (a, k) => a.reduce((x, r) => x + (r[k] || 0), 0);
+  $('#weekScores').innerHTML = !rs.study.length && !rs.gym.length
+    ? '<p class="hint">Check off a study or gym session and review it to see your scores here.</p>'
+    : REVIEWED.map(c => `<div class="row"><span class="lbl">${CATS[c].name}</span>
+        <div class="track"><div class="fill" style="width:${(avg(rs[c]) || 0) * 10}%;background:${color(c)}"></div></div>
+        <span class="val">${avg(rs[c]) === null ? '–' : avg(rs[c]) + '/10'}</span></div>`).join('')
+      + `<p class="hint">${rs.study.length + rs.gym.length} session${rs.study.length + rs.gym.length === 1 ? '' : 's'} reviewed.
+        Doom scrolling while studying: <b>${totalMin(rs.study, 'scroll')} min</b>.
+        Other time wasted: <b>${totalMin(rs.study, 'wasted') + totalMin(rs.gym, 'wasted')} min</b>.</p>`;
   $('#weekList').innerHTML = !days.length ? '<p class="hint">Nothing to check off yet.</p>' :
     days.map(([d, bl]) => `<div class="dayhead">${parseDate(d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}</div>`
       + bl.map(b => { const st = stateOf(b, d); return `<div class="item ${st}">
         <div class="bar" style="background:${color(b.cat)}"></div>
-        <div class="it">${CATS[b.cat].icon} ${esc(b.title)}<small>${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}</small></div>
+        <div class="it">${CATS[b.cat].icon} ${esc(b.title)}<small>${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}${st === 'done' && reviewOf(b, d) ? ` · ★ ${reviewOf(b, d).score}/10` : ''}</small></div>
         <button class="check" data-check="${b.id}" data-date="${d}" aria-label="Mark done">${st === 'done' ? '✓' : ''}</button></div>`; }).join('')).join('');
 }
 
@@ -383,6 +491,7 @@ function openSheet(block) {
   $('#fDate').value = b.date || sel; $('#fNotes').value = b.notes || '';
   $('#delBtn').classList.toggle('hidden', !block);
   $('#skipBtn').classList.toggle('hidden', !(block && block.repeat === 'weekly'));
+  $('#rateBtn').classList.toggle('hidden', !(block && REVIEWED.includes(block.cat) && isDone(block, sel)));
   renderForm();
   $('#sheetWrap').classList.add('open');
 }
@@ -440,6 +549,7 @@ $('#skipBtn').onclick = () => {
   b.skip = [...(b.skip || []), sel]; save(); closeSheet(); render(); toast('Skipped for this day');
 };
 $('#sheetBg').onclick = closeSheet;
+$('#rateBtn').onclick = () => { const b = state.blocks.find(x => x.id === editing); closeSheet(); openReview(b, sel); };
 
 // ---- main interactions ----
 $('#weekStrip').onclick = e => { const b = e.target.closest('[data-date]'); if (b) { sel = b.dataset.date; render(); } };
