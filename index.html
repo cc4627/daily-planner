@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Day Planner</title>
+<meta name="theme-color" content="#1e1b4b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Planner">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --bg: #f4f4f8; --card: #ffffff; --text: #16151f; --muted: #6b6a7b; --line: #e3e2ec;
+  --accent: #4338ca; --accent-soft: #e8e7ff; --danger: #dc2626;
+  --college: #3b82f6; --study: #a855f7; --gym: #22c55e; --work: #f97316; --other: #64748b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0d16; --card: #1a1926; --text: #f2f1f8; --muted: #9b9aad; --line: #2c2b3b;
+    --accent: #818cf8; --accent-soft: #26244a;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+body { padding: env(safe-area-inset-top) 0 calc(76px + env(safe-area-inset-bottom)); min-height: 100vh; }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+input, textarea, select { font: inherit; color: var(--text); }
+
+header { padding: 14px 16px 6px; display: flex; align-items: center; gap: 8px; }
+header h1 { font-size: 26px; margin: 0; flex: 1; letter-spacing: -0.02em; }
+header .sub { display: block; font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.icon-btn { width: 38px; height: 38px; border-radius: 50%; background: var(--card); display: grid; place-items: center; font-size: 18px; }
+.pill { padding: 8px 14px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 14px; }
+
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 8px 12px; }
+.day { padding: 8px 0 6px; border-radius: 14px; text-align: center; background: transparent; }
+.day .dn { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+.day .dd { font-size: 18px; font-weight: 600; margin-top: 2px; }
+.day .dots { display: flex; justify-content: center; gap: 2px; height: 6px; margin-top: 4px; }
+.day .dots i { width: 5px; height: 5px; border-radius: 50%; }
+.day.today .dd { color: var(--accent); }
+.day.sel { background: var(--accent); }
+.day.sel .dn, .day.sel .dd { color: #fff; }
+
+.summary { display: flex; gap: 8px; overflow-x: auto; padding: 6px 16px 10px; scrollbar-width: none; }
+.summary::-webkit-scrollbar { display: none; }
+.chip { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--card); font-size: 13px; font-weight: 600; }
+.chip i { width: 8px; height: 8px; border-radius: 50%; }
+
+.list { padding: 4px 16px 90px; display: flex; flex-direction: column; gap: 10px; }
+.block { display: flex; gap: 12px; background: var(--card); border-radius: 16px; padding: 12px 14px; align-items: stretch; position: relative; }
+.block .bar { width: 5px; border-radius: 3px; flex: none; }
+.block .body { flex: 1; min-width: 0; }
+.block .time { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.block .title { font-weight: 600; font-size: 17px; overflow-wrap: anywhere; }
+.block .notes { font-size: 14px; color: var(--muted); margin-top: 2px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.block .tags { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.tag.warn { color: var(--danger); }
+.tag.now { color: var(--accent); }
+.block.now { box-shadow: 0 0 0 2px var(--accent); }
+.block.done .title { text-decoration: line-through; color: var(--muted); }
+.check { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); flex: none; align-self: center; display: grid; place-items: center; color: #fff; font-size: 15px; }
+.block.done .check { background: var(--gym); border-color: var(--gym); }
+.gap { font-size: 13px; color: var(--muted); text-align: center; padding: 2px 0; }
+
+.empty { text-align: center; color: var(--muted); padding: 48px 24px; }
+.empty b { display: block; color: var(--text); font-size: 18px; margin-bottom: 4px; }
+
+.fab { position: fixed; right: 20px; bottom: calc(88px + env(safe-area-inset-bottom)); width: 58px; height: 58px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 30px; box-shadow: 0 6px 20px rgba(67, 56, 202, .4); }
+
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom); }
+nav.tabs button { flex: 1; padding: 10px 0 12px; font-size: 12px; font-weight: 600; color: var(--muted); }
+nav.tabs button span { display: block; font-size: 20px; }
+nav.tabs button.on { color: var(--accent); }
+
+.panel { padding: 4px 16px; }
+.card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+.card h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+.row .lbl { width: 70px; font-weight: 600; font-size: 14px; }
+.row .track { flex: 1; height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.row .fill { height: 100%; border-radius: 5px; }
+.row .val { width: 64px; text-align: right; font-variant-numeric: tabular-nums; font-size: 14px; }
+.goal { width: 56px; padding: 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); text-align: center; }
+.btn { display: block; width: 100%; padding: 13px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font-weight: 600; margin-top: 8px; }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.danger { background: transparent; color: var(--danger); }
+.hint { font-size: 13px; color: var(--muted); }
+
+.sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; z-index: 10; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 22px 22px 0 0; z-index: 11;
+  padding: 10px 18px calc(18px + env(safe-area-inset-bottom)); max-height: 92vh; overflow-y: auto;
+  transform: translateY(105%); transition: transform .25s ease; }
+.open .sheet-bg { display: block; }
+.open .sheet { transform: none; }
+.grabber { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 10px; }
+.sheet h3 { margin: 0 0 12px; font-size: 20px; }
+.field { margin-bottom: 14px; }
+.field > label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+.field input[type=text], .field textarea, .field input[type=time], .field input[type=date] {
+  width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); font-size: 16px; }
+.field textarea { min-height: 64px; resize: vertical; }
+.times { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { padding: 8px 12px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); font-size: 14px; font-weight: 600; }
+.seg button.on { color: #fff; border-color: transparent; }
+.days7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.days7 button { padding: 9px 0; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+.days7 button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.hidden { display: none !important; }
+.toast { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top)); transform: translateX(-50%);
+  background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<section id="dayView">
+  <header>
+    <h1 id="dayTitle">Today<span class="sub" id="daySub"></span></h1>
+    <button class="icon-btn" id="prevWeek" aria-label="Previous week">‹</button>
+    <button class="pill" id="todayBtn">Today</button>
+    <button class="icon-btn" id="nextWeek" aria-label="Next week">›</button>
+  </header>
+  <div class="week" id="weekStrip"></div>
+  <div class="summary" id="summary"></div>
+  <div class="list" id="list"></div>
+</section>
+
+<section id="weekView" class="hidden">
+  <header><h1>This week<span class="sub" id="weekRange"></span></h1></header>
+  <div class="panel">
+    <div class="card"><h2>Planned hours vs. weekly goal</h2><div id="weekBars"></div>
+      <p class="hint">Tap a goal number to change it.</p></div>
+    <div class="card"><h2>Completed</h2><div id="weekDone"></div></div>
+    <div class="card"><h2>Backup</h2>
+      <p class="hint">Your plan is saved on this device only. Export a backup now and then so you don't lose it.</p>
+      <button class="btn" id="exportBtn">Export backup</button>
+      <button class="btn" id="importBtn">Restore from backup</button>
+      <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+    </div>
+  </div>
+</section>
+
+<button class="fab" id="fab" aria-label="Add block">+</button>
+
+<nav class="tabs">
+  <button class="on" data-tab="day"><span>📅</span>Day</button>
+  <button data-tab="week"><span>📊</span>Week</button>
+</nav>
+
+<div id="sheetWrap">
+  <div class="sheet-bg" id="sheetBg"></div>
+  <form class="sheet" id="form" autocomplete="off">
+    <div class="grabber"></div>
+    <h3 id="formTitle">New block</h3>
+    <div class="field"><label>Category</label><div class="seg" id="catSeg"></div></div>
+    <div class="field"><label for="fTitle">Title</label><input type="text" id="fTitle" placeholder="e.g. Calculus lecture" required></div>
+    <div class="field times">
+      <div><label for="fStart">Start</label><input type="time" id="fStart" required></div>
+      <div><label for="fEnd">End</label><input type="time" id="fEnd" required></div>
+    </div>
+    <div class="field"><label>Repeat</label>
+      <div class="seg" id="repSeg"><button type="button" data-rep="once">Just this day</button><button type="button" data-rep="weekly">Every week</button></div>
+    </div>
+    <div class="field" id="dateField"><label for="fDate">Date</label><input type="date" id="fDate"></div>
+    <div class="field hidden" id="daysField"><label>On these days</label><div class="days7" id="daysSeg"></div></div>
+    <div class="field"><label for="fNotes">Notes</label><textarea id="fNotes" placeholder="Room, chapter, workout, shift details…"></textarea></div>
+    <button class="btn primary" type="submit">Save</button>
+    <button class="btn danger hidden" type="button" id="skipBtn">Skip just this day</button>
+    <button class="btn danger hidden" type="button" id="delBtn">Delete</button>
+  </form>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const CATS = {
+  college: { name: 'College', icon: '🎓' },
+  study:   { name: 'Study',   icon: '📚' },
+  gym:     { name: 'Gym',     icon: '💪' },
+  work:    { name: 'Work',    icon: '💼' },
+  other:   { name: 'Other',   icon: '•' },
+};
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const KEY = 'planner.v1';
+const $ = s => document.querySelector(s);
+const color = c => `var(--${c})`;
+
+// ---- state ----
+let state = load();
+let sel = isoDate(new Date());
+let editing = null;   // block id being edited, or null for new
+let form = {};        // sheet form state: cat, rep, days
+
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && Array.isArray(s.blocks)) return { goals: {}, ...s };
+  } catch (e) {}
+  return { blocks: [], goals: { college: 15, study: 12, gym: 5, work: 16 } };
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { toast('Could not save'); }
+}
+
+// ---- date helpers ----
+function isoDate(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function parseDate(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function addDays(s, n) { const d = parseDate(s); d.setDate(d.getDate() + n); return isoDate(d); }
+function weekStart(s) { const d = parseDate(s); const off = (d.getDay() + 6) % 7; return addDays(s, -off); } // Monday
+function mins(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+function dur(b) { let x = mins(b.end) - mins(b.start); return x < 0 ? x + 1440 : x; }
+function fmtTime(t) {
+  const [h, m] = t.split(':').map(Number);
+  return `${(h % 12) || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+}
+function fmtHours(m) { const h = m / 60; return (Math.round(h * 10) / 10) + 'h'; }
+
+// ---- block queries ----
+function blocksOn(date) {
+  const wd = parseDate(date).getDay();
+  return state.blocks
+    .filter(b => b.repeat === 'weekly'
+      ? b.days.includes(wd) && (!b.from || date >= b.from) && !(b.skip || []).includes(date)
+      : b.date === date)
+    .sort((a, b) => mins(a.start) - mins(b.start));
+}
+const isDone = (b, date) => (b.done || []).includes(date);
+
+// ---- rendering ----
+function render() {
+  renderStrip();
+  renderDay();
+  if (!$('#weekView').classList.contains('hidden')) renderWeek();
+}
+
+function renderStrip() {
+  const start = weekStart(sel), today = isoDate(new Date());
+  $('#weekStrip').innerHTML = Array.from({ length: 7 }, (_, i) => {
+    const d = addDays(start, i), cats = [...new Set(blocksOn(d).map(b => b.cat))];
+    return `<button class="day ${d === sel ? 'sel' : ''} ${d === today ? 'today' : ''}" data-date="${d}">
+      <div class="dn">${DAY_SHORT[parseDate(d).getDay()]}</div><div class="dd">${parseDate(d).getDate()}</div>
+      <div class="dots">${cats.map(c => `<i style="background:${color(c)}"></i>`).join('')}</div></button>`;
+  }).join('');
+}
+
+function renderDay() {
+  const d = parseDate(sel), today = isoDate(new Date());
+  const rel = sel === today ? 'Today' : sel === addDays(today, 1) ? 'Tomorrow' : sel === addDays(today, -1) ? 'Yesterday'
+    : d.toLocaleDateString(undefined, { weekday: 'long' });
+  $('#dayTitle').firstChild.textContent = rel;
+  $('#daySub').textContent = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const blocks = blocksOn(sel);
+  const totals = {};
+  blocks.forEach(b => totals[b.cat] = (totals[b.cat] || 0) + dur(b));
+  $('#summary').innerHTML = Object.keys(CATS).filter(c => totals[c])
+    .map(c => `<div class="chip"><i style="background:${color(c)}"></i>${CATS[c].name} ${fmtHours(totals[c])}</div>`).join('');
+
+  if (!blocks.length) {
+    $('#list').innerHTML = `<div class="empty"><b>Nothing planned</b>Tap + to add a class, study session, workout or shift.</div>`;
+    return;
+  }
+  const now = new Date(), nowM = now.getHours() * 60 + now.getMinutes();
+  let html = '', prevEnd = null;
+  blocks.forEach((b, i) => {
+    const s = mins(b.start), e = mins(b.end);
+    if (prevEnd !== null && s - prevEnd >= 30) html += `<div class="gap">${fmtHours(s - prevEnd)} free</div>`;
+    const clash = blocks.some((o, j) => j !== i && s < mins(o.end) && mins(o.start) < e);
+    const isNow = sel === today && nowM >= s && nowM < e;
+    const done = isDone(b, sel);
+    html += `<div class="block ${done ? 'done' : ''} ${isNow ? 'now' : ''}" data-id="${b.id}">
+      <div class="bar" style="background:${color(b.cat)}"></div>
+      <div class="body">
+        <div class="time">${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}</div>
+        <div class="title">${CATS[b.cat].icon} ${esc(b.title)}</div>
+        ${b.notes ? `<div class="notes">${esc(b.notes)}</div>` : ''}
+        <div class="tags">${b.repeat === 'weekly' ? '<span class="tag" style="color:var(--muted)">↻ weekly</span>' : ''}
+          ${isNow ? '<span class="tag now">● now</span>' : ''}${clash ? '<span class="tag warn">⚠ overlaps</span>' : ''}</div>
+      </div>
+      <button class="check" data-check="${b.id}" aria-label="Mark done">${done ? '✓' : ''}</button></div>`;
+    prevEnd = Math.max(prevEnd ?? 0, e);
+  });
+  $('#list').innerHTML = html;
+}
+
+function renderWeek() {
+  const start = weekStart(sel), end = addDays(start, 6);
+  const fmt = s => parseDate(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  $('#weekRange').textContent = `${fmt(start)} – ${fmt(end)}`;
+  const planned = {}, done = {};
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(start, i);
+    blocksOn(d).forEach(b => {
+      planned[b.cat] = (planned[b.cat] || 0) + dur(b);
+      if (isDone(b, d)) done[b.cat] = (done[b.cat] || 0) + dur(b);
+    });
+  }
+  $('#weekBars').innerHTML = ['college', 'study', 'gym', 'work'].map(c => {
+    const goal = state.goals[c] || 0, p = planned[c] || 0;
+    const pct = goal ? Math.min(100, p / 60 / goal * 100) : (p ? 100 : 0);
+    return `<div class="row"><span class="lbl">${CATS[c].name}</span>
+      <div class="track"><div class="fill" style="width:${pct}%;background:${color(c)}"></div></div>
+      <span class="val">${fmtHours(p)} /</span>
+      <input class="goal" type="number" inputmode="decimal" min="0" max="100" data-goal="${c}" value="${goal}"></div>`;
+  }).join('');
+  const tot = Object.values(planned).reduce((a, b) => a + b, 0), dn = Object.values(done).reduce((a, b) => a + b, 0);
+  $('#weekDone').innerHTML = Object.keys(CATS).filter(c => planned[c]).map(c => `<div class="row"><span class="lbl">${CATS[c].name}</span>
+      <div class="track"><div class="fill" style="width:${(done[c] || 0) / planned[c] * 100}%;background:${color(c)}"></div></div>
+      <span class="val">${fmtHours(done[c] || 0)}</span></div>`).join('')
+    + `<p class="hint">${tot ? `${Math.round(dn / tot * 100)}% of planned time done this week.` : 'No blocks planned this week yet.'}</p>`;
+}
+
+function esc(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800); }
+
+// ---- sheet ----
+function openSheet(block) {
+  editing = block ? block.id : null;
+  const b = block || defaultBlock();
+  form = { cat: b.cat, rep: b.repeat, days: [...(b.days || [parseDate(sel).getDay()])] };
+  $('#formTitle').textContent = block ? 'Edit block' : 'New block';
+  $('#fTitle').value = b.title; $('#fStart').value = b.start; $('#fEnd').value = b.end;
+  $('#fDate').value = b.date || sel; $('#fNotes').value = b.notes || '';
+  $('#delBtn').classList.toggle('hidden', !block);
+  $('#skipBtn').classList.toggle('hidden', !(block && block.repeat === 'weekly'));
+  renderForm();
+  $('#sheetWrap').classList.add('open');
+}
+function closeSheet() { $('#sheetWrap').classList.remove('open'); document.activeElement.blur(); }
+function defaultBlock() {
+  const last = blocksOn(sel).at(-1);
+  let start = last ? last.end : '09:00';
+  const e = (mins(start) + 60) % 1440;
+  return { cat: 'study', title: '', start, end: `${String(Math.floor(e / 60)).padStart(2, '0')}:${String(e % 60).padStart(2, '0')}`, repeat: 'once' };
+}
+function renderForm() {
+  $('#catSeg').innerHTML = Object.entries(CATS).map(([k, c]) =>
+    `<button type="button" data-cat="${k}" class="${form.cat === k ? 'on' : ''}" style="${form.cat === k ? `background:${color(k)}` : ''}">${c.icon} ${c.name}</button>`).join('');
+  document.querySelectorAll('#repSeg button').forEach(x => {
+    const on = x.dataset.rep === form.rep; x.classList.toggle('on', on); x.style.background = on ? 'var(--accent)' : '';
+  });
+  $('#dateField').classList.toggle('hidden', form.rep !== 'once');
+  $('#daysField').classList.toggle('hidden', form.rep !== 'weekly');
+  $('#daysSeg').innerHTML = [1, 2, 3, 4, 5, 6, 0].map(d =>
+    `<button type="button" data-wd="${d}" class="${form.days.includes(d) ? 'on' : ''}">${DAY_SHORT[d].slice(0, 2)}</button>`).join('');
+}
+
+$('#catSeg').onclick = e => { const b = e.target.closest('[data-cat]'); if (b) { form.cat = b.dataset.cat; renderForm(); } };
+$('#repSeg').onclick = e => { const b = e.target.closest('[data-rep]'); if (b) { form.rep = b.dataset.rep; renderForm(); } };
+$('#daysSeg').onclick = e => {
+  const b = e.target.closest('[data-wd]'); if (!b) return;
+  const d = +b.dataset.wd; form.days = form.days.includes(d) ? form.days.filter(x => x !== d) : [...form.days, d]; renderForm();
+};
+$('#form').onsubmit = e => {
+  e.preventDefault();
+  const title = $('#fTitle').value.trim();
+  if (!title) return toast('Add a title');
+  if (form.rep === 'weekly' && !form.days.length) return toast('Pick at least one day');
+  if ($('#fStart').value === $('#fEnd').value) return toast('End time must differ from start');
+  const old = state.blocks.find(b => b.id === editing);
+  const b = {
+    id: editing || (Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    cat: form.cat, title, start: $('#fStart').value, end: $('#fEnd').value, notes: $('#fNotes').value.trim(),
+    repeat: form.rep, done: old ? old.done || [] : [],
+  };
+  if (form.rep === 'weekly') { b.days = form.days.sort(); b.skip = old?.skip || []; b.from = old?.from || weekStart(sel); }
+  else { b.date = $('#fDate').value || sel; }
+  state.blocks = state.blocks.filter(x => x.id !== b.id).concat(b);
+  save(); closeSheet();
+  if (b.date && b.date !== sel) { sel = b.date; }
+  render(); toast('Saved');
+};
+$('#delBtn').onclick = () => {
+  const b = state.blocks.find(x => x.id === editing);
+  if (b.repeat === 'weekly' && !confirm(`Delete "${b.title}" from every week?`)) return;
+  state.blocks = state.blocks.filter(x => x.id !== editing); save(); closeSheet(); render(); toast('Deleted');
+};
+$('#skipBtn').onclick = () => {
+  const b = state.blocks.find(x => x.id === editing);
+  b.skip = [...(b.skip || []), sel]; save(); closeSheet(); render(); toast('Skipped for this day');
+};
+$('#sheetBg').onclick = closeSheet;
+
+// ---- main interactions ----
+$('#weekStrip').onclick = e => { const b = e.target.closest('[data-date]'); if (b) { sel = b.dataset.date; render(); } };
+$('#prevWeek').onclick = () => { sel = addDays(sel, -7); render(); };
+$('#nextWeek').onclick = () => { sel = addDays(sel, 7); render(); };
+$('#todayBtn').onclick = () => { sel = isoDate(new Date()); render(); };
+$('#fab').onclick = () => openSheet(null);
+$('#list').onclick = e => {
+  const c = e.target.closest('[data-check]');
+  if (c) {
+    const b = state.blocks.find(x => x.id === c.dataset.check);
+    b.done = isDone(b, sel) ? b.done.filter(d => d !== sel) : [...(b.done || []), sel];
+    save(); render(); return;
+  }
+  const blk = e.target.closest('.block');
+  if (blk) openSheet(state.blocks.find(x => x.id === blk.dataset.id));
+};
+document.querySelectorAll('nav.tabs button').forEach(t => t.onclick = () => {
+  document.querySelectorAll('nav.tabs button').forEach(x => x.classList.toggle('on', x === t));
+  const week = t.dataset.tab === 'week';
+  $('#dayView').classList.toggle('hidden', week); $('#weekView').classList.toggle('hidden', !week);
+  $('#fab').classList.toggle('hidden', week);
+  render();
+});
+$('#weekBars').onchange = e => {
+  const g = e.target.closest('[data-goal]');
+  if (g) { state.goals[g.dataset.goal] = Math.max(0, +g.value || 0); save(); renderWeek(); }
+};
+
+// ---- backup ----
+$('#exportBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `planner-backup-${isoDate(new Date())}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('#importBtn').onclick = () => $('#importFile').click();
+$('#importFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const s = JSON.parse(await f.text());
+    if (!Array.isArray(s.blocks)) throw 0;
+    if (!confirm('Replace your current plan with this backup?')) return;
+    state = { goals: {}, ...s }; save(); render(); toast('Backup restored');
+  } catch (err) { toast('That file is not a planner backup'); }
+  e.target.value = '';
+};
+
+// keep "now" highlight fresh and roll over at midnight
+let lastToday = isoDate(new Date());
+setInterval(() => {
+  const t = isoDate(new Date());
+  if (t !== lastToday && sel === lastToday) sel = t;
+  lastToday = t; renderDay();
+}, 60000);
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js');
+render();
+</script>
+</body>
+</html>
