@@ -1,13 +1,12 @@
 {
   "blocks": [
-    { "id": "p1016-study1", "cat": "study", "title": "Study session", "date": "2026-10-16", "start": "12:00", "end": "13:30", "notes": "", "repeat": "once" },
-    { "id": "p1016-lunch", "cat": "other", "title": "Lunch", "date": "2026-10-16", "start": "13:30", "end": "14:15", "notes": "", "repeat": "once" },
-    { "id": "p1016-study2", "cat": "study", "title": "Study session", "date": "2026-10-16", "start": "14:15", "end": "15:30", "notes": "", "repeat": "once" },
-    { "id": "p1016-ready", "cat": "other", "title": "Get ready for milking", "date": "2026-10-16", "start": "15:30", "end": "16:00", "notes": "", "repeat": "once" },
-    { "id": "p1016-milk", "cat": "work", "title": "Milking", "date": "2026-10-16", "start": "16:00", "end": "18:00", "notes": "", "repeat": "once" },
-    { "id": "p1016-gym", "cat": "gym", "title": "Gym", "date": "2026-10-16", "start": "18:15", "end": "19:15", "notes": "", "repeat": "once" },
-    { "id": "p1016-dinner", "cat": "other", "title": "Dinner", "date": "2026-10-16", "start": "19:15", "end": "20:00", "notes": "", "repeat": "once" },
-    { "id": "p1016-study3", "cat": "study", "title": "Evening study", "date": "2026-10-16", "start": "20:00", "end": "21:00", "notes": "", "repeat": "once" }
+    {"id": "p1016-study1", "cat": "other", "title": "Driving & lunch", "date": "2026-10-16", "start": "12:00", "end": "13:30", "notes": "", "repeat": "once"},
+    {"id": "p1016-study2", "cat": "study", "title": "Study session", "date": "2026-10-16", "start": "13:30", "end": "15:30", "notes": "", "repeat": "once"},
+    {"id": "p1016-ready", "cat": "other", "title": "Get ready for milking", "date": "2026-10-16", "start": "15:30", "end": "16:00", "notes": "", "repeat": "once"},
+    {"id": "p1016-milk", "cat": "work", "title": "Milking", "date": "2026-10-16", "start": "16:00", "end": "18:00", "notes": "", "repeat": "once"},
+    {"id": "p1016-gym", "cat": "gym", "title": "Gym", "date": "2026-10-16", "start": "18:15", "end": "19:15", "notes": "", "repeat": "once"},
+    {"id": "p1016-dinner", "cat": "other", "title": "Dinner", "date": "2026-10-16", "start": "19:15", "end": "20:00", "notes": "", "repeat": "once"},
+    {"id": "p1016-study3", "cat": "study", "title": "Evening study", "date": "2026-10-16", "start": "20:00", "end": "21:00", "notes": "", "repeat": "once"}
   ],
-  "remove": []
+  "remove": ["p1016-lunch"]
 }
