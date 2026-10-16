@@ -17,6 +17,7 @@
   --bg: #f4f4f8; --card: #ffffff; --text: #16151f; --muted: #6b6a7b; --line: #e3e2ec;
   --accent: #4338ca; --accent-soft: #e8e7ff; --danger: #dc2626;
   --ok: #16a34a; --ok-bg: #dcfce7; --miss: #2563eb; --miss-bg: #dbeafe; --early: #86efac;
+  --rel: #ec4899; --lei: #22c55e; --fin: #eab308; --edu: #a855f7;
   --college: #3b82f6; --study: #a855f7; --gym: #22c55e; --work: #f97316; --other: #64748b;
 }
 @media (prefers-color-scheme: dark) {
@@ -94,6 +95,15 @@ header .sub { display: block; font-size: 14px; font-weight: 500; color: var(--mu
 .scorebox b { font-size: 30px; color: var(--accent); font-variant-numeric: tabular-nums; }
 .scorebox span { font-size: 13px; color: var(--muted); }
 .tag.score { color: var(--accent); }
+.recap-score { text-align: center; padding: 18px 16px 8px; }
+.recap-score b { display: block; font-size: 52px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.recap-score span { font-size: 14px; color: var(--muted); }
+.pillar h2 { display: flex; align-items: center; gap: 8px; color: var(--text); text-transform: none; letter-spacing: 0; font-size: 17px; }
+.pillar h2 i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.pillar h2 em { margin-left: auto; font-style: normal; font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pillar .from { font-size: 13px; color: var(--muted); margin: -4px 0 12px; }
+.recap-link { display: flex; align-items: center; gap: 12px; margin: 14px 16px 0; padding: 14px; border-radius: 16px; background: var(--accent-soft); color: var(--accent); font-weight: 600; width: calc(100% - 32px); text-align: left; }
+.recap-link b { margin-left: auto; font-size: 18px; }
 .gap { font-size: 13px; color: var(--muted); text-align: center; padding: 2px 0; }
 
 .empty { text-align: center; color: var(--muted); padding: 48px 24px; }
@@ -160,6 +170,24 @@ nav.tabs button.on { color: var(--accent); }
   <div class="week" id="weekStrip"></div>
   <div class="summary" id="summary"></div>
   <div class="list" id="list"></div>
+  <button class="recap-link" id="dayRecap"></button>
+</section>
+
+<section id="recapView" class="hidden">
+  <header>
+    <h1>Daily recap<span class="sub" id="rcDate"></span></h1>
+    <button class="icon-btn" id="rcPrev" aria-label="Previous day">‹</button>
+    <button class="pill" id="rcToday">Today</button>
+    <button class="icon-btn" id="rcNext" aria-label="Next day">›</button>
+  </header>
+  <div class="panel">
+    <div class="card"><div class="recap-score"><b id="rcTotal">–</b><span id="rcTotalHint">RLFE score</span></div><div id="rcBars"></div></div>
+    <div id="rcPillars"></div>
+    <div class="card"><h2>Reflection</h2>
+      <div class="field"><label for="rcWin">Best thing about today</label><textarea id="rcWin" data-note="win"></textarea></div>
+      <div class="field"><label for="rcBetter">What will you do better tomorrow?</label><textarea id="rcBetter" data-note="better"></textarea></div>
+    </div>
+  </div>
 </section>
 
 <section id="weekView" class="hidden">
@@ -168,6 +196,7 @@ nav.tabs button.on { color: var(--accent); }
     <div class="card"><h2>Planned vs. weekly goal</h2><div id="weekBars"></div>
       <p class="hint">Hours per week, except gym, which is sessions per week. Tap a goal number to change it.</p></div>
     <div class="card"><h2>Projected vs achieved</h2><div id="weekDone"></div></div>
+    <div class="card"><h2>RLFE this week</h2><div id="weekRecap"></div></div>
     <div class="card"><h2>Session scores</h2><div id="weekScores"></div></div>
     <div class="card"><h2>Check off this week</h2><div id="weekList"></div></div>
     <div class="card"><h2>Backup</h2>
@@ -183,6 +212,7 @@ nav.tabs button.on { color: var(--accent); }
 
 <nav class="tabs">
   <button class="on" data-tab="day"><span>📅</span>Day</button>
+  <button data-tab="recap"><span>📝</span>Recap</button>
   <button data-tab="week"><span>📊</span>Week</button>
 </nav>
 
@@ -354,6 +384,126 @@ $('#erFull').onclick = () => { const b = state.blocks.find(x => x.id === er.id),
 $('#erCancel').onclick = closeEarly;
 $('#earlyBg').onclick = closeEarly;
 
+// ---- daily recap: RLFE, each area worth 25% ----
+const PILLARS = {
+  rel: { name: 'Relationships', sub: 'Family, friends, girlfriend' },
+  lei: { name: 'Leisure & health', sub: 'Gym, training, calories and macros' },
+  fin: { name: 'Finances', sub: 'Spending (work isn\'t needed for 100%)' },
+  edu: { name: 'Education', sub: 'Study and college' },
+};
+const YN = [['yes', 'Yes'], ['no', 'No']];
+const HIT = [['yes', 'Hit it'], ['close', 'Close'], ['no', 'Missed']];
+const RECAP_Q = {
+  rel: [
+    { k: 'who', q: 'Who did you spend quality time with?', type: 'multi', opts: [['family', 'Family'], ['friends', 'Friends'], ['gf', 'Girlfriend'], ['none', 'Nobody today']] },
+    { k: 'relQ', q: 'How present and good was that time?', type: 'scale', lo: 'Distracted', hi: 'Fully present', when: a => a.who && a.who.length && !a.who.includes('none') },
+  ],
+  lei: [
+    { k: 'trained', q: 'Did you train or go to the gym?', type: 'chips', opts: YN },
+    { k: 'trainQ', q: 'How good was the session?', type: 'scale', lo: 'Poor', hi: 'Perfect', when: a => a.trained === 'yes' },
+    { k: 'cals', q: 'Calorie target', type: 'chips', opts: HIT },
+    { k: 'macros', q: 'Macros (protein etc.)', type: 'chips', opts: HIT },
+  ],
+  fin: [
+    { k: 'spend', q: 'Any silly or impulse spending?', type: 'chips', opts: [['none', 'None'], ['little', 'A little'], ['lot', 'Yes, a lot']] },
+  ],
+  edu: [
+    { k: 'studied', q: 'Did you study?', type: 'chips', opts: YN },
+    { k: 'studyQ', q: 'How effective was it?', type: 'scale', lo: 'Got nothing done', hi: 'Nailed it', when: a => a.studied === 'yes' },
+    { k: 'classes', q: 'College classes', type: 'chips', opts: [['all', 'Went to all'], ['some', 'Missed some'], ['missed', 'Missed them all']], when: (a, d) => blocksOn(d).some(b => b.cat === 'college') },
+  ],
+};
+// what the plan already knows about a day, used to pre-fill the recap
+function planFacts(date) {
+  const bl = blocksOn(date), f = {};
+  const doneOf = cat => bl.filter(b => b.cat === cat && isDone(b, date));
+  const avgScore = list => { const r = list.map(b => reviewOf(b, date)).filter(Boolean); return r.length ? r.reduce((x, y) => x + y.score, 0) / r.length : null; };
+  const toScale = sc => Math.max(1, Math.min(5, Math.round(1 + sc / 10 * 4)));
+  const gym = doneOf('gym'), study = doneOf('study'), college = bl.filter(b => b.cat === 'college');
+  if (gym.length) { f.trained = 'yes'; const sc = avgScore(gym); if (sc !== null) f.trainQ = toScale(sc); }
+  if (study.length) { f.studied = 'yes'; const sc = avgScore(study); if (sc !== null) f.studyQ = toScale(sc); }
+  if (college.length) { const n = doneOf('college').length; f.classes = n === college.length ? 'all' : n ? 'some' : (isMissed(college[0], date) ? 'missed' : undefined); }
+  f.workMins = doneOf('work').reduce((x, b) => x + doneMins(b, date), 0);
+  f.studyMins = study.reduce((x, b) => x + doneMins(b, date), 0);
+  f.gymCount = gym.length;
+  return f;
+}
+function recapAnswers(date) {
+  const saved = (state.recaps || {})[date] || {}, f = planFacts(date), a = {};
+  ['trained', 'trainQ', 'studied', 'studyQ', 'classes'].forEach(k => { if (f[k] !== undefined) a[k] = f[k]; });
+  return { ...a, ...saved };
+}
+const q01 = q => (q - 1) / 4; // 1..5 scale to 0..1
+// each area is scored 0..25; null until its questions are answered
+function recapScore(date) {
+  const a = (state.recaps || {})[date] ? recapAnswers(date) : null;
+  const out = { rel: null, lei: null, fin: null, edu: null, total: null };
+  if (!a) return out;
+  const hit = v => ({ yes: 1, close: 0.5, no: 0 }[v]);
+  if (a.who && a.who.length) out.rel = a.who.includes('none') ? 0 : a.relQ ? 25 * (0.5 + 0.5 * q01(a.relQ)) : null;
+  if (a.trained && a.cals && a.macros && (a.trained === 'no' || a.trainQ))
+    out.lei = (a.trained === 'yes' ? 10 * (0.5 + 0.5 * q01(a.trainQ)) : 0) + 7.5 * hit(a.cals) + 7.5 * hit(a.macros);
+  if (a.spend) out.fin = { none: 25, little: 12.5, lot: 0 }[a.spend];
+  const needClasses = blocksOn(date).some(b => b.cat === 'college');
+  if (a.studied && (a.studied === 'no' || a.studyQ) && (!needClasses || a.classes)) {
+    const st = a.studied === 'yes' ? 0.5 + 0.5 * q01(a.studyQ) : 0;
+    out.edu = needClasses ? 25 * (0.7 * st + 0.3 * { all: 1, some: 0.5, missed: 0 }[a.classes]) : 25 * st;
+  }
+  const parts = ['rel', 'lei', 'fin', 'edu'].map(k => out[k]);
+  if (parts.every(x => x !== null)) out.total = Math.round(parts.reduce((x, y) => x + y, 0));
+  return out;
+}
+function renderRecap() {
+  const d = parseDate(sel), today = isoDate(new Date());
+  $('#rcDate').textContent = (sel === today ? 'Today · ' : '') + d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const a = recapAnswers(sel), f = planFacts(sel), sc = recapScore(sel);
+  $('#rcTotal').textContent = sc.total === null ? '–' : sc.total + '%';
+  $('#rcTotalHint').textContent = sc.total === null ? 'Answer each area to get your RLFE score' : 'RLFE score for the day';
+  $('#rcBars').innerHTML = Object.entries(PILLARS).map(([k, p]) => `<div class="row"><span class="lbl" style="width:110px">${p.name}</span>
+    <div class="track"><div class="fill" style="width:${(sc[k] || 0) / 25 * 100}%;background:var(--${k})"></div></div>
+    <span class="val">${sc[k] === null ? '–' : Math.round(sc[k] / 25 * 100) + '%'}</span></div>`).join('');
+  const fromPlan = {
+    lei: f.gymCount ? `From your plan: ${f.gymCount} gym session${f.gymCount > 1 ? 's' : ''} checked off.` : '',
+    fin: f.workMins ? `From your plan: worked ${fmtHours(f.workMins)} today.` : '',
+    edu: f.studyMins ? `From your plan: studied ${fmtHours(f.studyMins)}.` : '',
+  };
+  $('#rcPillars').innerHTML = Object.entries(PILLARS).map(([k, p]) => `<div class="card pillar">
+    <h2><i style="background:var(--${k})"></i>${p.name}<em>${sc[k] === null ? '' : Math.round(sc[k] / 25 * 100) + '%'}</em></h2>
+    <p class="from">${p.sub}${fromPlan[k] ? ' · ' + fromPlan[k] : ''}</p>
+    ${RECAP_Q[k].filter(q => !q.when || q.when(a, sel)).map(q => {
+      let ctl;
+      if (q.type === 'scale') ctl = `<div class="scale">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-rk="${q.k}" data-v="${n}" class="${a[q.k] === n ? 'on' : ''}">${n}</button>`).join('')}</div>
+        <div class="scale-ends"><span>${q.lo}</span><span>${q.hi}</span></div>`;
+      else ctl = `<div class="chips">${q.opts.map(([v, l]) => {
+        const on = q.type === 'multi' ? (a[q.k] || []).includes(v) : a[q.k] === v;
+        return `<button type="button" data-rk="${q.k}" data-s="${v}" data-multi="${q.type === 'multi' ? 1 : ''}" class="${on ? 'on' : ''}">${l}</button>`;
+      }).join('')}</div>`;
+      return `<div class="field"><label>${q.q}</label>${ctl}</div>`;
+    }).join('')}</div>`).join('');
+  const saved = (state.recaps || {})[sel] || {};
+  $('#rcWin').value = saved.win || ''; $('#rcBetter').value = saved.better || '';
+}
+function setRecap(k, v) {
+  const recaps = state.recaps || (state.recaps = {});
+  recaps[sel] = { ...recapAnswers(sel), ...(recaps[sel] || {}), [k]: v };
+  save();
+}
+$('#rcPillars').onclick = e => {
+  const t = e.target.closest('[data-rk]'); if (!t) return;
+  const k = t.dataset.rk, cur = recapAnswers(sel);
+  if (t.dataset.multi) {
+    let list = cur[k] || [], v = t.dataset.s;
+    list = list.includes(v) ? list.filter(x => x !== v) : v === 'none' ? ['none'] : [...list.filter(x => x !== 'none'), v];
+    setRecap(k, list);
+  } else setRecap(k, t.dataset.s !== undefined ? t.dataset.s : +t.dataset.v);
+  renderRecap(); renderDay();
+};
+document.querySelectorAll('[data-note]').forEach(el => el.oninput = () => setRecap(el.dataset.note, el.value));
+$('#rcPrev').onclick = () => { sel = addDays(sel, -1); render(); };
+$('#rcNext').onclick = () => { sel = addDays(sel, 1); render(); };
+$('#rcToday').onclick = () => { sel = isoDate(new Date()); render(); };
+$('#dayRecap').onclick = () => showTab('recap');
+
 // ---- session reviews (study and gym) ----
 const REVIEWED = ['study', 'gym'];
 const MINS = [0, 5, 10, 15, 30, 45, 60];
@@ -424,10 +574,20 @@ $('#rvSkip').onclick = closeReview;
 $('#reviewBg').onclick = closeReview;
 
 // ---- rendering ----
+let tab = 'day';
+function showTab(name) {
+  tab = name;
+  document.querySelectorAll('nav.tabs button').forEach(x => x.classList.toggle('on', x.dataset.tab === name));
+  ['day', 'recap', 'week'].forEach(v => $(`#${v}View`).classList.toggle('hidden', v !== name));
+  $('#fab').classList.toggle('hidden', name !== 'day');
+  window.scrollTo(0, 0);
+  render();
+}
 function render() {
   renderStrip();
   renderDay();
-  if (!$('#weekView').classList.contains('hidden')) renderWeek();
+  if (tab === 'week') renderWeek();
+  if (tab === 'recap') renderRecap();
 }
 
 function renderStrip() {
@@ -453,6 +613,8 @@ function renderDay() {
   $('#summary').innerHTML = Object.keys(CATS).filter(c => totals[c])
     .map(c => `<div class="chip"><i style="background:${color(c)}"></i>${CATS[c].name} ${fmtHours(totals[c])}</div>`).join('');
 
+  const rc = recapScore(sel);
+  $('#dayRecap').innerHTML = `<span>📝</span>${rc.total !== null ? 'Daily recap' : sel > isoDate(new Date()) ? 'Daily recap (fill in at the end of the day)' : 'Do your daily recap'}<b>${rc.total !== null ? rc.total + '%' : '›'}</b>`;
   if (!blocks.length) {
     $('#list').innerHTML = `<div class="empty"><b>Nothing planned</b>Tap + to add a class, study session, workout or shift.</div>`;
     return;
@@ -538,6 +700,13 @@ function renderWeek() {
   days.forEach(([d, bl]) => bl.forEach(b => { const r = reviewOf(b, d); if (r && rs[b.cat] && isDone(b, d)) rs[b.cat].push(r); }));
   const avg = a => a.length ? Math.round(a.reduce((x, r) => x + r.score, 0) / a.length * 10) / 10 : null;
   const totalMin = (a, k) => a.reduce((x, r) => x + (r[k] || 0), 0);
+  const recs = [];
+  for (let i = 0; i < 7; i++) { const r = recapScore(addDays(start, i)); if (r.total !== null) recs.push(r); }
+  const avgOf = k => Math.round(recs.reduce((x, r) => x + r[k], 0) / recs.length / 25 * 100);
+  $('#weekRecap').innerHTML = !recs.length ? '<p class="hint">Do a daily recap in the Recap tab to see your RLFE scores here.</p>'
+    : Object.entries(PILLARS).map(([k, p]) => `<div class="row"><span class="lbl" style="width:110px">${p.name}</span>
+        <div class="track"><div class="fill" style="width:${avgOf(k)}%;background:var(--${k})"></div></div><span class="val">${avgOf(k)}%</span></div>`).join('')
+      + `<p class="hint">Average daily score: <b>${Math.round(recs.reduce((x, r) => x + r.total, 0) / recs.length)}%</b> over ${recs.length} recapped day${recs.length > 1 ? 's' : ''}.</p>`;
   $('#weekScores').innerHTML = !rs.study.length && !rs.gym.length
     ? '<p class="hint">Check off a study or gym session and review it to see your scores here.</p>'
     : REVIEWED.map(c => `<div class="row"><span class="lbl">${CATS[c].name}</span>
@@ -641,10 +810,7 @@ $('#list').onclick = e => {
 };
 document.querySelectorAll('nav.tabs button').forEach(t => t.onclick = () => {
   document.querySelectorAll('nav.tabs button').forEach(x => x.classList.toggle('on', x === t));
-  const week = t.dataset.tab === 'week';
-  $('#dayView').classList.toggle('hidden', week); $('#weekView').classList.toggle('hidden', !week);
-  $('#fab').classList.toggle('hidden', week);
-  render();
+  showTab(t.dataset.tab);
 });
 $('#weekList').onclick = e => {
   const c = e.target.closest('[data-check]');
@@ -677,7 +843,7 @@ $('#importFile').onchange = async e => {
       state.blocks = state.blocks.concat(fresh); save();
       const first = fresh.map(b => b.date).filter(Boolean).sort()[0];
       if (first) sel = first;
-      document.querySelector('[data-tab=day]').click(); toast('Added to your plan');
+      showTab('day'); toast('Added to your plan');
     } else {
       if (!confirm('Replace your current plan with this backup?')) return;
       state = { goals: {}, ...s }; save(); render(); toast('Backup restored');

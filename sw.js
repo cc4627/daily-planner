@@ -1,6 +1,6 @@
 // Offline support. Pages load from the network when online (so updates show up
 // straight away) and fall back to the cache when offline. The inbox is never cached.
-const CACHE = 'planner-v8';
+const CACHE = 'planner-v9';
 const FILES = ['./', 'index.html', 'manifest.json', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
