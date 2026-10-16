@@ -4,8 +4,7 @@
     {"id": "p1016-gym", "cat": "gym", "title": "Gym", "date": "2026-10-16", "start": "14:00", "end": "16:00", "notes": "", "repeat": "once"},
     {"id": "p1016-ready", "cat": "other", "title": "Head to milking", "date": "2026-10-16", "start": "16:00", "end": "16:30", "notes": "", "repeat": "once"},
     {"id": "p1016-milk", "cat": "work", "title": "Milking", "date": "2026-10-16", "start": "16:30", "end": "18:15", "notes": "Home by 6:15", "repeat": "once"},
-    {"id": "p1016-dinner", "cat": "other", "title": "Dinner", "date": "2026-10-16", "start": "18:15", "end": "19:00", "notes": "", "repeat": "once"},
-    {"id": "p1016-study3", "cat": "study", "title": "Evening study", "date": "2026-10-16", "start": "19:00", "end": "20:00", "notes": "", "repeat": "once"}
+    {"id": "p1016-study3", "cat": "study", "title": "Evening study", "date": "2026-10-16", "start": "18:15", "end": "22:00", "notes": "", "repeat": "once"}
   ],
-  "remove": ["p1016-lunch", "p1016-study2"]
+  "remove": ["p1016-lunch", "p1016-study2", "p1016-dinner"]
 }
