@@ -16,14 +16,14 @@
 :root {
   --bg: #f4f4f8; --card: #ffffff; --text: #16151f; --muted: #6b6a7b; --line: #e3e2ec;
   --accent: #4338ca; --accent-soft: #e8e7ff; --danger: #dc2626;
-  --ok: #16a34a; --ok-bg: #dcfce7; --miss: #2563eb; --miss-bg: #dbeafe;
+  --ok: #16a34a; --ok-bg: #dcfce7; --miss: #2563eb; --miss-bg: #dbeafe; --early: #86efac;
   --college: #3b82f6; --study: #a855f7; --gym: #22c55e; --work: #f97316; --other: #64748b;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0e0d16; --card: #1a1926; --text: #f2f1f8; --muted: #9b9aad; --line: #2c2b3b;
     --accent: #818cf8; --accent-soft: #26244a;
-    --ok: #22c55e; --ok-bg: #11301e; --miss: #60a5fa; --miss-bg: #15254a;
+    --ok: #22c55e; --ok-bg: #11301e; --miss: #60a5fa; --miss-bg: #15254a; --early: #166534;
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -221,6 +221,18 @@ nav.tabs button.on { color: var(--accent); }
     <button class="btn" type="button" id="rvSkip">Skip review</button>
   </form>
 </div>
+<div id="earlyWrap">
+  <div class="sheet-bg" id="earlyBg"></div>
+  <form class="sheet" id="early" autocomplete="off">
+    <div class="grabber"></div>
+    <h3 id="erTitle">Finished early?</h3>
+    <p class="hint" id="erHint"></p>
+    <div class="field"><label for="erTime">I finished at</label><input type="time" id="erTime" required></div>
+    <button class="btn primary" type="submit">Mark complete</button>
+    <button class="btn" type="button" id="erFull">I did the full session</button>
+    <button class="btn danger" type="button" id="erCancel">Cancel</button>
+  </form>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -284,14 +296,63 @@ function isMissed(b, date) {
   return mins(b.end) > mins(b.start) && now.getHours() * 60 + now.getMinutes() >= mins(b.end);
 }
 const stateOf = (b, date) => isDone(b, date) ? 'done' : isMissed(b, date) ? 'missed' : '';
+// Gym and work can be finished early (the actual finish time is recorded);
+// study can only be checked off once its planned time is over.
+const EARLY_OK = ['gym', 'work'];
+function notOverYet(b, date) {
+  const now = new Date(), today = isoDate(now);
+  if (date !== today) return date > today;
+  const nowM = now.getHours() * 60 + now.getMinutes();
+  return mins(b.end) > mins(b.start) ? nowM < mins(b.end) : true;
+}
 function toggleDone(id, date) {
   const b = state.blocks.find(x => x.id === id); if (!b) return;
-  const was = isDone(b, date);
-  b.done = was ? b.done.filter(d => d !== date) : [...(b.done || []), date];
-  if (was && b.reviews) delete b.reviews[date];
-  save(); render();
-  if (!was && REVIEWED.includes(b.cat)) openReview(b, date);
+  if (isDone(b, date)) {
+    b.done = b.done.filter(d => d !== date);
+    if (b.reviews) delete b.reviews[date];
+    if (b.finished) delete b.finished[date];
+    save(); render(); return;
+  }
+  if (notOverYet(b, date)) {
+    if (b.cat === 'study') return toast(`Study can be checked off once it ends at ${fmtTime(b.end)}`);
+    if (EARLY_OK.includes(b.cat)) return openEarly(b, date);
+  }
+  completeBlock(b, date);
 }
+function completeBlock(b, date, finishedAt) {
+  b.done = [...(b.done || []), date];
+  if (finishedAt) b.finished = { ...(b.finished || {}), [date]: finishedAt };
+  save(); render();
+  if (REVIEWED.includes(b.cat)) openReview(b, date);
+}
+// minutes actually done: up to the early finish time if there was one
+function doneMins(b, date) {
+  const f = b.finished && b.finished[date];
+  if (!f) return dur(b);
+  return Math.max(0, Math.min(dur(b), mins(f) - mins(b.start)));
+}
+
+let er = null;
+function openEarly(b, date) {
+  er = { id: b.id, date };
+  const now = new Date(), r = Math.floor((now.getHours() * 60 + now.getMinutes()) / 5) * 5;
+  const def = date === isoDate(now) && r > mins(b.start) ? r : mins(b.end) - 5 > mins(b.start) ? mins(b.end) - 5 : mins(b.end);
+  $('#erTime').value = `${String(Math.floor(def / 60)).padStart(2, '0')}:${String(def % 60).padStart(2, '0')}`;
+  $('#erTitle').textContent = `${CATS[b.cat].icon} Finish ${b.title} early?`;
+  $('#erHint').textContent = `Planned ${fmtTime(b.start)} – ${fmtTime(b.end)}. Only the time you actually did counts towards your achieved hours.`;
+  $('#earlyWrap').classList.add('open');
+}
+function closeEarly() { $('#earlyWrap').classList.remove('open'); er = null; document.activeElement.blur(); }
+$('#early').onsubmit = e => {
+  e.preventDefault();
+  const b = state.blocks.find(x => x.id === er.id), t = $('#erTime').value, date = er.date;
+  if (!t || mins(t) <= mins(b.start)) return toast(`Pick a time after ${fmtTime(b.start)}`);
+  if (mins(t) >= mins(b.end)) { closeEarly(); return completeBlock(b, date); }
+  closeEarly(); completeBlock(b, date, t);
+};
+$('#erFull').onclick = () => { const b = state.blocks.find(x => x.id === er.id), date = er.date; closeEarly(); completeBlock(b, date); };
+$('#erCancel').onclick = closeEarly;
+$('#earlyBg').onclick = closeEarly;
 
 // ---- session reviews (study and gym) ----
 const REVIEWED = ['study', 'gym'];
@@ -342,7 +403,7 @@ function renderReview() {
     else ctl = `<div class="chips">${q.opts.map(([v, l]) => `<button type="button" data-k="${q.k}" data-s="${v}" class="${a[q.k] === v ? 'on' : ''}">${l}</button>`).join('')}</div>`;
     return `<div class="field"><label>${q.q}</label>${ctl}</div>`;
   }).join('');
-  const sc = scoreOf(b.cat, a, dur(b));
+  const sc = scoreOf(b.cat, a, doneMins(b, rv.date));
   $('#rvScore').textContent = sc === null ? '–' : sc;
 }
 $('#rvQuestions').onclick = e => {
@@ -353,7 +414,7 @@ $('#rvQuestions').onclick = e => {
 $('#review').onsubmit = e => {
   e.preventDefault();
   const b = state.blocks.find(x => x.id === rv.id), a = rv.answers;
-  const sc = scoreOf(b.cat, a, dur(b));
+  const sc = scoreOf(b.cat, a, doneMins(b, rv.date));
   if (sc === null) return toast('Rate effectiveness and intensity first');
   a.notes = $('#rvNotes').value.trim(); a.score = sc;
   b.reviews = { ...(b.reviews || {}), [rv.date]: a };
@@ -402,12 +463,12 @@ function renderDay() {
     const s = mins(b.start), e = mins(b.end);
     if (prevEnd !== null && s - prevEnd >= 30) html += `<div class="gap">${fmtHours(s - prevEnd)} free</div>`;
     const clash = blocks.some((o, j) => j !== i && s < mins(o.end) && mins(o.start) < e);
-    const isNow = sel === today && nowM >= s && nowM < e;
+    const isNow = sel === today && nowM >= s && nowM < e && !isDone(b, sel);
     const st = stateOf(b, sel), done = st === 'done';
     html += `<div class="block ${st} ${isNow ? 'now' : ''}" data-id="${b.id}">
       <div class="bar" style="background:${color(b.cat)}"></div>
       <div class="body">
-        <div class="time">${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}</div>
+        <div class="time">${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}${done && b.finished && b.finished[sel] ? ` · <b>finished ${fmtTime(b.finished[sel])} (${fmtHours(doneMins(b, sel))})</b>` : ''}</div>
         <div class="title">${CATS[b.cat].icon} ${esc(b.title)}</div>
         ${b.notes ? `<div class="notes">${esc(b.notes)}</div>` : ''}
         <div class="tags">${b.repeat === 'weekly' ? '<span class="tag" style="color:var(--muted)">↻ weekly</span>' : ''}
@@ -424,12 +485,15 @@ function renderWeek() {
   const start = weekStart(sel), end = addDays(start, 6);
   const fmt = s => parseDate(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   $('#weekRange').textContent = `${fmt(start)} – ${fmt(end)}`;
-  const planned = {}, done = {};
+  const planned = {}, done = {}, early = {};
   for (let i = 0; i < 7; i++) {
     const d = addDays(start, i);
     blocksOn(d).forEach(b => {
       planned[b.cat] = (planned[b.cat] || 0) + dur(b);
-      if (isDone(b, d)) done[b.cat] = (done[b.cat] || 0) + dur(b);
+      if (isDone(b, d)) {
+        done[b.cat] = (done[b.cat] || 0) + doneMins(b, d);
+        early[b.cat] = (early[b.cat] || 0) + dur(b) - doneMins(b, d);
+      }
     });
   }
   $('#weekBars').innerHTML = ['college', 'study', 'gym', 'work'].map(c => {
@@ -447,16 +511,16 @@ function renderWeek() {
     if (bl.length) days.push([d, bl]);
   }
   const sum = o => Object.values(o).reduce((a, b) => a + b, 0);
-  const tot = sum(planned), dn = sum(done), ms = sum(missed);
+  const tot = sum(planned), dn = sum(done), ms = sum(missed), ea = sum(early);
   const pct = (x, of) => of ? x / of * 100 : 0;
   $('#weekDone').innerHTML = !tot ? '<p class="hint">No blocks planned this week yet.</p>' :
     Object.keys(CATS).filter(c => planned[c]).map(c => `<div class="row"><span class="lbl">${CATS[c].name}</span>
-      <div class="stack"><i style="width:${pct(done[c] || 0, planned[c])}%;background:var(--ok)"></i><i style="width:${pct(missed[c] || 0, planned[c])}%;background:var(--miss)"></i></div>
+      <div class="stack"><i style="width:${pct(done[c] || 0, planned[c])}%;background:var(--ok)"></i><i style="width:${pct(early[c] || 0, planned[c])}%;background:var(--early)"></i><i style="width:${pct(missed[c] || 0, planned[c])}%;background:var(--miss)"></i></div>
       <span class="val">${fmtHours(done[c] || 0)} / ${fmtHours(planned[c])}</span></div>`).join('')
     + `<div class="row" style="margin-top:14px"><span class="lbl">Total</span>
-      <div class="stack"><i style="width:${pct(dn, tot)}%;background:var(--ok)"></i><i style="width:${pct(ms, tot)}%;background:var(--miss)"></i></div>
+      <div class="stack"><i style="width:${pct(dn, tot)}%;background:var(--ok)"></i><i style="width:${pct(ea, tot)}%;background:var(--early)"></i><i style="width:${pct(ms, tot)}%;background:var(--miss)"></i></div>
       <span class="val">${fmtHours(dn)} / ${fmtHours(tot)}</span></div>
-    <div class="legend"><span style="--c:var(--ok)">Achieved</span><span style="--c:var(--miss)">Not checked off</span><span style="--c:var(--line)">Still to come</span></div>
+    <div class="legend"><span style="--c:var(--ok)">Achieved</span>${ea ? '<span style="--c:var(--early)">Finished early</span>' : ''}<span style="--c:var(--miss)">Not checked off</span><span style="--c:var(--line)">Still to come</span></div>
     <p class="hint">You've achieved ${fmtHours(dn)} of the ${fmtHours(tot)} you projected this week (${Math.round(pct(dn, tot))}%).</p>`;
   const rs = { study: [], gym: [] };
   days.forEach(([d, bl]) => bl.forEach(b => { const r = reviewOf(b, d); if (r && rs[b.cat] && isDone(b, d)) rs[b.cat].push(r); }));
@@ -474,7 +538,7 @@ function renderWeek() {
     days.map(([d, bl]) => `<div class="dayhead">${parseDate(d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}</div>`
       + bl.map(b => { const st = stateOf(b, d); return `<div class="item ${st}">
         <div class="bar" style="background:${color(b.cat)}"></div>
-        <div class="it">${CATS[b.cat].icon} ${esc(b.title)}<small>${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}${st === 'done' && reviewOf(b, d) ? ` · ★ ${reviewOf(b, d).score}/10` : ''}</small></div>
+        <div class="it">${CATS[b.cat].icon} ${esc(b.title)}<small>${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}${st === 'done' && b.finished && b.finished[d] ? ` · finished ${fmtTime(b.finished[d])}` : ''}${st === 'done' && reviewOf(b, d) ? ` · ★ ${reviewOf(b, d).score}/10` : ''}</small></div>
         <button class="check" data-check="${b.id}" data-date="${d}" aria-label="Mark done">${st === 'done' ? '✓' : ''}</button></div>`; }).join('')).join('');
 }
 
