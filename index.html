@@ -144,7 +144,7 @@ nav.tabs button.on { color: var(--accent); }
     <div class="card"><h2>Backup</h2>
       <p class="hint">Your plan is saved on this device only. Export a backup now and then so you don't lose it.</p>
       <button class="btn" id="exportBtn">Export backup</button>
-      <button class="btn" id="importBtn">Restore from backup</button>
+      <button class="btn" id="importBtn">Add plan or restore backup</button>
       <input type="file" id="importFile" accept="application/json,.json" class="hidden">
     </div>
   </div>
@@ -431,10 +431,22 @@ $('#importFile').onchange = async e => {
   try {
     const s = JSON.parse(await f.text());
     if (!Array.isArray(s.blocks)) throw 0;
-    if (!confirm('Replace your current plan with this backup?')) return;
-    state = { goals: {}, ...s }; save(); render(); toast('Backup restored');
-  } catch (err) { toast('That file is not a planner backup'); }
-  e.target.value = '';
+    if (s.add) {
+      // a plan file: add its blocks to the current plan, skipping any already added
+      const have = new Set(state.blocks.map(b => b.id));
+      const fresh = s.blocks.filter(b => !have.has(b.id));
+      if (!fresh.length) return toast('Already in your plan');
+      if (!confirm(`Add ${fresh.length} block${fresh.length > 1 ? 's' : ''} to your plan?`)) return;
+      state.blocks = state.blocks.concat(fresh); save();
+      const first = fresh.map(b => b.date).filter(Boolean).sort()[0];
+      if (first) sel = first;
+      document.querySelector('[data-tab=day]').click(); toast('Added to your plan');
+    } else {
+      if (!confirm('Replace your current plan with this backup?')) return;
+      state = { goals: {}, ...s }; save(); render(); toast('Backup restored');
+    }
+  } catch (err) { toast('That file is not a planner backup or plan'); }
+  finally { e.target.value = ''; }
 };
 
 // keep "now" highlight fresh and roll over at midnight
