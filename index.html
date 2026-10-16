@@ -457,6 +457,42 @@ setInterval(() => {
   lastToday = t; renderDay();
 }, 60000);
 
+// ---- inbox: plans Claude publishes to inbox.json are added automatically ----
+// Each block is applied once per version, so blocks you edit or delete stay that way
+// until a changed version of the same block is published.
+async function syncInbox() {
+  let inbox;
+  try {
+    const res = await fetch('inbox.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    inbox = await res.json();
+  } catch (e) { return; }
+  const seen = state.inboxSeen || (state.inboxSeen = {});
+  let added = 0, changed = 0, removed = 0;
+  (inbox.remove || []).forEach(id => {
+    if (seen[id] === 'removed') return;
+    const n = state.blocks.length;
+    state.blocks = state.blocks.filter(b => b.id !== id);
+    if (state.blocks.length < n) removed++;
+    seen[id] = 'removed';
+  });
+  (inbox.blocks || []).forEach(b => {
+    if (!b || !b.id || !CATS[b.cat] || !b.start || !b.end) return;
+    const sig = JSON.stringify(b);
+    if (seen[b.id] === sig) return;
+    const i = state.blocks.findIndex(x => x.id === b.id);
+    if (i >= 0) { state.blocks[i] = { ...b, done: state.blocks[i].done || [] }; changed++; }
+    else { state.blocks.push({ done: [], ...b }); added++; }
+    seen[b.id] = sig;
+  });
+  if (!added && !changed && !removed) return;
+  save(); render();
+  const parts = [added && `${added} added`, changed && `${changed} updated`, removed && `${removed} removed`].filter(Boolean);
+  toast(`Plan from Claude: ${parts.join(', ')}`);
+}
+syncInbox();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) syncInbox(); });
+
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js');
 render();
 </script>

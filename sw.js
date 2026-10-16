@@ -1,5 +1,6 @@
-// Offline support: serve the app shell from cache, refresh it in the background.
-const CACHE = 'planner-v2';
+// Offline support. Pages load from the network when online (so updates show up
+// straight away) and fall back to the cache when offline. The inbox is never cached.
+const CACHE = 'planner-v3';
 const FILES = ['./', 'index.html', 'manifest.json', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -11,11 +12,9 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(caches.match(e.request).then(hit => {
-    const net = fetch(e.request).then(res => {
-      if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
-      return res;
-    }).catch(() => hit);
-    return hit || net;
-  }));
+  if (new URL(e.request.url).pathname.endsWith('/inbox.json')) return; // straight to the network
+  e.respondWith(fetch(e.request).then(res => {
+    if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
+    return res;
+  }).catch(() => caches.match(e.request, { ignoreSearch: true })));
 });
