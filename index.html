@@ -16,12 +16,14 @@
 :root {
   --bg: #f4f4f8; --card: #ffffff; --text: #16151f; --muted: #6b6a7b; --line: #e3e2ec;
   --accent: #4338ca; --accent-soft: #e8e7ff; --danger: #dc2626;
+  --ok: #16a34a; --ok-bg: #dcfce7; --miss: #2563eb; --miss-bg: #dbeafe;
   --college: #3b82f6; --study: #a855f7; --gym: #22c55e; --work: #f97316; --other: #64748b;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0e0d16; --card: #1a1926; --text: #f2f1f8; --muted: #9b9aad; --line: #2c2b3b;
     --accent: #818cf8; --accent-soft: #26244a;
+    --ok: #22c55e; --ok-bg: #11301e; --miss: #60a5fa; --miss-bg: #15254a;
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -64,9 +66,24 @@ header .sub { display: block; font-size: 14px; font-weight: 500; color: var(--mu
 .tag.warn { color: var(--danger); }
 .tag.now { color: var(--accent); }
 .block.now { box-shadow: 0 0 0 2px var(--accent); }
-.block.done .title { text-decoration: line-through; color: var(--muted); }
+.block.done { background: var(--ok-bg); }
+.block.missed { background: var(--miss-bg); }
+.tag.ok { color: var(--ok); }
+.tag.miss { color: var(--miss); }
 .check { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); flex: none; align-self: center; display: grid; place-items: center; color: #fff; font-size: 15px; }
-.block.done .check { background: var(--gym); border-color: var(--gym); }
+.block.done .check, .item.done .check { background: var(--ok); border-color: var(--ok); }
+.block.missed .check, .item.missed .check { border-color: var(--miss); }
+.stack { flex: 1; height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; display: flex; }
+.stack i { display: block; height: 100%; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-top: 6px; }
+.legend span::before { content: ''; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; background: var(--c); }
+.dayhead { font-size: 13px; font-weight: 700; color: var(--muted); margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+.item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 12px; margin-bottom: 6px; background: var(--bg); }
+.item.done { background: var(--ok-bg); }
+.item.missed { background: var(--miss-bg); }
+.item .bar { width: 4px; align-self: stretch; border-radius: 2px; flex: none; }
+.item .it { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.item .it small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
 .gap { font-size: 13px; color: var(--muted); text-align: center; padding: 2px 0; }
 
 .empty { text-align: center; color: var(--muted); padding: 48px 24px; }
@@ -88,7 +105,7 @@ nav.tabs button.on { color: var(--accent); }
 .row .lbl { width: 70px; font-weight: 600; font-size: 14px; }
 .row .track { flex: 1; height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
 .row .fill { height: 100%; border-radius: 5px; }
-.row .val { width: 64px; text-align: right; font-variant-numeric: tabular-nums; font-size: 14px; }
+.row .val { min-width: 64px; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; font-size: 14px; }
 .goal { width: 56px; padding: 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); text-align: center; }
 .btn { display: block; width: 100%; padding: 13px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font-weight: 600; margin-top: 8px; }
 .btn.primary { background: var(--accent); color: #fff; }
@@ -140,7 +157,8 @@ nav.tabs button.on { color: var(--accent); }
   <div class="panel">
     <div class="card"><h2>Planned hours vs. weekly goal</h2><div id="weekBars"></div>
       <p class="hint">Tap a goal number to change it.</p></div>
-    <div class="card"><h2>Completed</h2><div id="weekDone"></div></div>
+    <div class="card"><h2>Projected vs achieved</h2><div id="weekDone"></div></div>
+    <div class="card"><h2>Check off this week</h2><div id="weekList"></div></div>
     <div class="card"><h2>Backup</h2>
       <p class="hint">Your plan is saved on this device only. Export a backup now and then so you don't lose it.</p>
       <button class="btn" id="exportBtn">Export backup</button>
@@ -234,6 +252,19 @@ function blocksOn(date) {
     .sort((a, b) => mins(a.start) - mins(b.start));
 }
 const isDone = (b, date) => (b.done || []).includes(date);
+// missed = its time is over and it was never checked off
+function isMissed(b, date) {
+  if (isDone(b, date)) return false;
+  const now = new Date(), today = isoDate(now);
+  if (date !== today) return date < today;
+  return mins(b.end) > mins(b.start) && now.getHours() * 60 + now.getMinutes() >= mins(b.end);
+}
+const stateOf = (b, date) => isDone(b, date) ? 'done' : isMissed(b, date) ? 'missed' : '';
+function toggleDone(id, date) {
+  const b = state.blocks.find(x => x.id === id); if (!b) return;
+  b.done = isDone(b, date) ? b.done.filter(d => d !== date) : [...(b.done || []), date];
+  save(); render();
+}
 
 // ---- rendering ----
 function render() {
@@ -276,15 +307,16 @@ function renderDay() {
     if (prevEnd !== null && s - prevEnd >= 30) html += `<div class="gap">${fmtHours(s - prevEnd)} free</div>`;
     const clash = blocks.some((o, j) => j !== i && s < mins(o.end) && mins(o.start) < e);
     const isNow = sel === today && nowM >= s && nowM < e;
-    const done = isDone(b, sel);
-    html += `<div class="block ${done ? 'done' : ''} ${isNow ? 'now' : ''}" data-id="${b.id}">
+    const st = stateOf(b, sel), done = st === 'done';
+    html += `<div class="block ${st} ${isNow ? 'now' : ''}" data-id="${b.id}">
       <div class="bar" style="background:${color(b.cat)}"></div>
       <div class="body">
         <div class="time">${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}</div>
         <div class="title">${CATS[b.cat].icon} ${esc(b.title)}</div>
         ${b.notes ? `<div class="notes">${esc(b.notes)}</div>` : ''}
         <div class="tags">${b.repeat === 'weekly' ? '<span class="tag" style="color:var(--muted)">↻ weekly</span>' : ''}
-          ${isNow ? '<span class="tag now">● now</span>' : ''}${clash ? '<span class="tag warn">⚠ overlaps</span>' : ''}</div>
+          ${isNow ? '<span class="tag now">● now</span>' : ''}${clash ? '<span class="tag warn">⚠ overlaps</span>' : ''}
+          ${done ? '<span class="tag ok">✓ achieved</span>' : st === 'missed' ? '<span class="tag miss">not checked off</span>' : ''}</div>
       </div>
       <button class="check" data-check="${b.id}" aria-label="Mark done">${done ? '✓' : ''}</button></div>`;
     prevEnd = Math.max(prevEnd ?? 0, e);
@@ -312,11 +344,30 @@ function renderWeek() {
       <span class="val">${fmtHours(p)} /</span>
       <input class="goal" type="number" inputmode="decimal" min="0" max="100" data-goal="${c}" value="${goal}"></div>`;
   }).join('');
-  const tot = Object.values(planned).reduce((a, b) => a + b, 0), dn = Object.values(done).reduce((a, b) => a + b, 0);
-  $('#weekDone').innerHTML = Object.keys(CATS).filter(c => planned[c]).map(c => `<div class="row"><span class="lbl">${CATS[c].name}</span>
-      <div class="track"><div class="fill" style="width:${(done[c] || 0) / planned[c] * 100}%;background:${color(c)}"></div></div>
-      <span class="val">${fmtHours(done[c] || 0)}</span></div>`).join('')
-    + `<p class="hint">${tot ? `${Math.round(dn / tot * 100)}% of planned time done this week.` : 'No blocks planned this week yet.'}</p>`;
+  const missed = {}, days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(start, i), bl = blocksOn(d);
+    bl.forEach(b => { if (isMissed(b, d)) missed[b.cat] = (missed[b.cat] || 0) + dur(b); });
+    if (bl.length) days.push([d, bl]);
+  }
+  const sum = o => Object.values(o).reduce((a, b) => a + b, 0);
+  const tot = sum(planned), dn = sum(done), ms = sum(missed);
+  const pct = (x, of) => of ? x / of * 100 : 0;
+  $('#weekDone').innerHTML = !tot ? '<p class="hint">No blocks planned this week yet.</p>' :
+    Object.keys(CATS).filter(c => planned[c]).map(c => `<div class="row"><span class="lbl">${CATS[c].name}</span>
+      <div class="stack"><i style="width:${pct(done[c] || 0, planned[c])}%;background:var(--ok)"></i><i style="width:${pct(missed[c] || 0, planned[c])}%;background:var(--miss)"></i></div>
+      <span class="val">${fmtHours(done[c] || 0)} / ${fmtHours(planned[c])}</span></div>`).join('')
+    + `<div class="row" style="margin-top:14px"><span class="lbl">Total</span>
+      <div class="stack"><i style="width:${pct(dn, tot)}%;background:var(--ok)"></i><i style="width:${pct(ms, tot)}%;background:var(--miss)"></i></div>
+      <span class="val">${fmtHours(dn)} / ${fmtHours(tot)}</span></div>
+    <div class="legend"><span style="--c:var(--ok)">Achieved</span><span style="--c:var(--miss)">Not checked off</span><span style="--c:var(--line)">Still to come</span></div>
+    <p class="hint">You've achieved ${fmtHours(dn)} of the ${fmtHours(tot)} you projected this week (${Math.round(pct(dn, tot))}%).</p>`;
+  $('#weekList').innerHTML = !days.length ? '<p class="hint">Nothing to check off yet.</p>' :
+    days.map(([d, bl]) => `<div class="dayhead">${parseDate(d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}</div>`
+      + bl.map(b => { const st = stateOf(b, d); return `<div class="item ${st}">
+        <div class="bar" style="background:${color(b.cat)}"></div>
+        <div class="it">${CATS[b.cat].icon} ${esc(b.title)}<small>${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}</small></div>
+        <button class="check" data-check="${b.id}" data-date="${d}" aria-label="Mark done">${st === 'done' ? '✓' : ''}</button></div>`; }).join('')).join('');
 }
 
 function esc(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -398,11 +449,7 @@ $('#todayBtn').onclick = () => { sel = isoDate(new Date()); render(); };
 $('#fab').onclick = () => openSheet(null);
 $('#list').onclick = e => {
   const c = e.target.closest('[data-check]');
-  if (c) {
-    const b = state.blocks.find(x => x.id === c.dataset.check);
-    b.done = isDone(b, sel) ? b.done.filter(d => d !== sel) : [...(b.done || []), sel];
-    save(); render(); return;
-  }
+  if (c) return toggleDone(c.dataset.check, sel);
   const blk = e.target.closest('.block');
   if (blk) openSheet(state.blocks.find(x => x.id === blk.dataset.id));
 };
@@ -413,6 +460,10 @@ document.querySelectorAll('nav.tabs button').forEach(t => t.onclick = () => {
   $('#fab').classList.toggle('hidden', week);
   render();
 });
+$('#weekList').onclick = e => {
+  const c = e.target.closest('[data-check]');
+  if (c) toggleDone(c.dataset.check, c.dataset.date);
+};
 $('#weekBars').onchange = e => {
   const g = e.target.closest('[data-goal]');
   if (g) { state.goals[g.dataset.goal] = Math.max(0, +g.value || 0); save(); renderWeek(); }
@@ -454,7 +505,7 @@ let lastToday = isoDate(new Date());
 setInterval(() => {
   const t = isoDate(new Date());
   if (t !== lastToday && sel === lastToday) sel = t;
-  lastToday = t; renderDay();
+  lastToday = t; render();
 }, 60000);
 
 // ---- inbox: plans Claude publishes to inbox.json are added automatically ----
