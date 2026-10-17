@@ -82,6 +82,7 @@ header .sub { display: block; font-size: 14px; font-weight: 500; color: var(--mu
 .item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 12px; margin-bottom: 6px; background: var(--bg); }
 .item.done { background: var(--ok-bg); }
 .item.missed { background: var(--miss-bg); }
+.tag.why { color: var(--miss); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .item .bar { width: 4px; align-self: stretch; border-radius: 2px; flex: none; }
 .item .it { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
 .item .it small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
@@ -184,6 +185,7 @@ nav.tabs button.on { color: var(--accent); }
     <div class="card"><div class="recap-score"><b id="rcTotal">–</b><span id="rcTotalHint">RLFE score</span></div><div id="rcBars"></div></div>
     <div id="rcPillars"></div>
     <div class="card"><h2>Reflection</h2>
+      <div id="rcMissed"></div>
       <div class="field"><label for="rcWin">Best thing about today</label><textarea id="rcWin" data-note="win"></textarea></div>
       <div class="field"><label for="rcBetter">What will you do better tomorrow?</label><textarea id="rcBetter" data-note="better"></textarea></div>
     </div>
@@ -235,6 +237,7 @@ nav.tabs button.on { color: var(--accent); }
     <div class="field"><label for="fNotes">Notes</label><textarea id="fNotes" placeholder="Room, chapter, workout, shift details…"></textarea></div>
     <button class="btn primary" type="submit">Save</button>
     <button class="btn hidden" type="button" id="rateBtn">Review this session</button>
+    <button class="btn" type="button" id="missBtn">I missed this</button>
     <button class="btn danger hidden" type="button" id="skipBtn">Skip just this day</button>
     <button class="btn danger hidden" type="button" id="delBtn">Delete</button>
   </form>
@@ -261,6 +264,18 @@ nav.tabs button.on { color: var(--accent); }
     <button class="btn primary" type="submit">Mark complete</button>
     <button class="btn" type="button" id="erFull">I did the full session</button>
     <button class="btn danger" type="button" id="erCancel">Cancel</button>
+  </form>
+</div>
+<div id="whyWrap">
+  <div class="sheet-bg" id="whyBg"></div>
+  <form class="sheet" id="why" autocomplete="off">
+    <div class="grabber"></div>
+    <h3 id="whyTitle">Why did you miss it?</h3>
+    <div class="field"><div class="chips" id="whyChips"></div></div>
+    <div class="field"><label for="whyNote">More detail (optional)</label><textarea id="whyNote" placeholder="What got in the way, and what would help next time?"></textarea></div>
+    <button class="btn primary" type="submit">Save</button>
+    <button class="btn hidden" type="button" id="whyClear">It wasn't missed</button>
+    <button class="btn danger" type="button" id="whyCancel">Cancel</button>
   </form>
 </div>
 <div class="toast" id="toast"></div>
@@ -319,8 +334,10 @@ function blocksOn(date) {
 }
 const isDone = (b, date) => (b.done || []).includes(date);
 // missed = its time is over and it was never checked off
+const whyOf = (b, date) => b.missedWhy && b.missedWhy[date];
 function isMissed(b, date) {
   if (isDone(b, date)) return false;
+  if (whyOf(b, date)) return true;
   const now = new Date(), today = isoDate(now);
   if (date !== today) return date < today;
   return mins(b.end) > mins(b.start) && now.getHours() * 60 + now.getMinutes() >= mins(b.end);
@@ -351,6 +368,7 @@ function toggleDone(id, date) {
 }
 function completeBlock(b, date, finishedAt) {
   b.done = [...(b.done || []), date];
+  if (whyOf(b, date)) delete b.missedWhy[date];
   if (finishedAt) b.finished = { ...(b.finished || {}), [date]: finishedAt };
   save(); render();
   if (REVIEWED.includes(b.cat)) openReview(b, date);
@@ -388,7 +406,7 @@ $('#earlyBg').onclick = closeEarly;
 const PILLARS = {
   rel: { name: 'Relationships', sub: 'Family, friends, girlfriend' },
   lei: { name: 'Leisure & health', sub: 'Gym, training, calories and macros' },
-  fin: { name: 'Finances', sub: 'Spending (work isn\'t needed for 100%)' },
+  fin: { name: 'Finances', sub: 'Spending' },
   edu: { name: 'Education', sub: 'Study and college' },
 };
 const YN = [['yes', 'Yes'], ['no', 'No']];
@@ -425,6 +443,8 @@ function planFacts(date) {
   if (college.length) { const n = doneOf('college').length; f.classes = n === college.length ? 'all' : n ? 'some' : (isMissed(college[0], date) ? 'missed' : undefined); }
   f.workMins = doneOf('work').reduce((x, b) => x + doneMins(b, date), 0);
   f.studyMins = study.reduce((x, b) => x + doneMins(b, date), 0);
+  f.studyPlanned = bl.filter(b => b.cat === 'study').reduce((x, b) => x + dur(b), 0);
+  f.missed = bl.filter(b => b.missedWhy && b.missedWhy[date]);
   f.gymCount = gym.length;
   return f;
 }
@@ -433,21 +453,24 @@ function recapAnswers(date) {
   ['trained', 'trainQ', 'studied', 'studyQ', 'classes'].forEach(k => { if (f[k] !== undefined) a[k] = f[k]; });
   return { ...a, ...saved };
 }
-const q01 = q => (q - 1) / 4; // 1..5 scale to 0..1
+// 1..5 rating to 0..1 on a steep curve: a 3 is only 30%, full marks need a 5
+const curve = q => [0, 0, 0.1, 0.3, 0.6, 1][q] || 0;
 // each area is scored 0..25; null until its questions are answered
 function recapScore(date) {
   const a = (state.recaps || {})[date] ? recapAnswers(date) : null;
   const out = { rel: null, lei: null, fin: null, edu: null, total: null };
   if (!a) return out;
-  const hit = v => ({ yes: 1, close: 0.5, no: 0 }[v]);
-  if (a.who && a.who.length) out.rel = a.who.includes('none') ? 0 : a.relQ ? 25 * (0.5 + 0.5 * q01(a.relQ)) : null;
+  const hit = v => ({ yes: 1, close: 0.25, no: 0 }[v]);
+  if (a.who && a.who.length) out.rel = a.who.includes('none') ? 0 : a.relQ ? 25 * curve(a.relQ) : null;
   if (a.trained && a.cals && a.macros && (a.trained === 'no' || a.trainQ))
-    out.lei = (a.trained === 'yes' ? 10 * (0.5 + 0.5 * q01(a.trainQ)) : 0) + 7.5 * hit(a.cals) + 7.5 * hit(a.macros);
-  if (a.spend) out.fin = { none: 25, little: 12.5, lot: 0 }[a.spend];
+    out.lei = (a.trained === 'yes' ? 10 * curve(a.trainQ) : 0) + 7.5 * hit(a.cals) + 7.5 * hit(a.macros);
+  if (a.spend) out.fin = { none: 25, little: 7.5, lot: 0 }[a.spend];
   const needClasses = blocksOn(date).some(b => b.cat === 'college');
   if (a.studied && (a.studied === 'no' || a.studyQ) && (!needClasses || a.classes)) {
-    const st = a.studied === 'yes' ? 0.5 + 0.5 * q01(a.studyQ) : 0;
-    out.edu = needClasses ? 25 * (0.7 * st + 0.3 * { all: 1, some: 0.5, missed: 0 }[a.classes]) : 25 * st;
+    // study quality, scaled down when planned study time wasn't all done
+    const f = planFacts(date), share = f.studyPlanned ? Math.min(1, f.studyMins / f.studyPlanned) : 1;
+    const st = a.studied === 'yes' ? curve(a.studyQ) * share : 0;
+    out.edu = needClasses ? 25 * (0.7 * st + 0.3 * { all: 1, some: 0.25, missed: 0 }[a.classes]) : 25 * st;
   }
   const parts = ['rel', 'lei', 'fin', 'edu'].map(k => out[k]);
   if (parts.every(x => x !== null)) out.total = Math.round(parts.reduce((x, y) => x + y, 0));
@@ -480,6 +503,8 @@ function renderRecap() {
       }).join('')}</div>`;
       return `<div class="field"><label>${q.q}</label>${ctl}</div>`;
     }).join('')}</div>`).join('');
+  $('#rcMissed').innerHTML = f.missed.length ? `<div class="field"><label>Missed today</label>${f.missed.map(b =>
+    `<div class="item missed"><div class="bar" style="background:${color(b.cat)}"></div><div class="it">${CATS[b.cat].icon} ${esc(b.title)}<small>${esc(whyOf(b, sel).reason)}${whyOf(b, sel).note ? ' · ' + esc(whyOf(b, sel).note) : ''}</small></div></div>`).join('')}</div>` : '';
   const saved = (state.recaps || {})[sel] || {};
   $('#rcWin').value = saved.win || ''; $('#rcBetter').value = saved.better || '';
 }
@@ -635,7 +660,7 @@ function renderDay() {
         ${b.notes ? `<div class="notes">${esc(b.notes)}</div>` : ''}
         <div class="tags">${b.repeat === 'weekly' ? '<span class="tag" style="color:var(--muted)">↻ weekly</span>' : ''}
           ${isNow ? '<span class="tag now">● now</span>' : ''}${clash ? '<span class="tag warn">⚠ overlaps</span>' : ''}
-          ${done && reviewOf(b, sel) ? `<span class="tag score">★ ${reviewOf(b, sel).score}/10</span>` : ''}${done ? '<span class="tag ok">✓ achieved</span>' : st === 'missed' ? '<span class="tag miss">not checked off</span>' : ''}</div>
+          ${done && reviewOf(b, sel) ? `<span class="tag score">★ ${reviewOf(b, sel).score}/10</span>` : ''}${done ? '<span class="tag ok">✓ achieved</span>' : st === 'missed' ? (whyOf(b, sel) ? `<span class="tag miss" data-why="${b.id}">✗ missed · ${esc(whyOf(b, sel).reason)}</span>` : `<span class="tag why" data-why="${b.id}">not checked off · add reason</span>`) : ''}</div>
       </div>
       <button class="check" data-check="${b.id}" aria-label="Mark done">${done ? '✓' : ''}</button></div>`;
     prevEnd = Math.max(prevEnd ?? 0, e);
@@ -719,7 +744,7 @@ function renderWeek() {
     days.map(([d, bl]) => `<div class="dayhead">${parseDate(d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}</div>`
       + bl.map(b => { const st = stateOf(b, d); return `<div class="item ${st}">
         <div class="bar" style="background:${color(b.cat)}"></div>
-        <div class="it">${CATS[b.cat].icon} ${esc(b.title)}<small>${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}${st === 'done' && b.finished && b.finished[d] ? ` · finished ${fmtTime(b.finished[d])}` : ''}${st === 'done' && reviewOf(b, d) ? ` · ★ ${reviewOf(b, d).score}/10` : ''}</small></div>
+        <div class="it">${CATS[b.cat].icon} ${esc(b.title)}<small>${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}${st === 'done' && b.finished && b.finished[d] ? ` · finished ${fmtTime(b.finished[d])}` : ''}${st === 'done' && reviewOf(b, d) ? ` · ★ ${reviewOf(b, d).score}/10` : ''}${st === 'missed' && whyOf(b, d) ? ` · missed: ${esc(whyOf(b, d).reason)}` : ''}</small></div>
         <button class="check" data-check="${b.id}" data-date="${d}" aria-label="Mark done">${st === 'done' ? '✓' : ''}</button></div>`; }).join('')).join('');
 }
 
@@ -736,6 +761,8 @@ function openSheet(block) {
   $('#fDate').value = b.date || sel; $('#fNotes').value = b.notes || '';
   $('#delBtn').classList.toggle('hidden', !block);
   $('#skipBtn').classList.toggle('hidden', !(block && block.repeat === 'weekly'));
+  $('#missBtn').classList.toggle('hidden', !block);
+  $('#missBtn').textContent = block && whyOf(block, sel) ? 'Change missed reason' : 'I missed this';
   $('#rateBtn').classList.toggle('hidden', !(block && REVIEWED.includes(block.cat) && isDone(block, sel)));
   renderForm();
   $('#sheetWrap').classList.add('open');
@@ -794,6 +821,38 @@ $('#skipBtn').onclick = () => {
   b.skip = [...(b.skip || []), sel]; save(); closeSheet(); render(); toast('Skipped for this day');
 };
 $('#sheetBg').onclick = closeSheet;
+// ---- missed blocks with a reason ----
+const WHY = ['Too tired', 'Ran out of time', 'Plans changed', 'Felt unwell', 'Procrastinated', 'Other'];
+let wy = null;
+function openWhy(b, date) {
+  const cur = whyOf(b, date) || {};
+  wy = { id: b.id, date, reason: cur.reason || '' };
+  $('#whyTitle').textContent = `${CATS[b.cat].icon} Why did you miss ${b.title}?`;
+  $('#whyNote').value = cur.note || '';
+  $('#whyClear').classList.toggle('hidden', !cur.reason);
+  renderWhy();
+  $('#whyWrap').classList.add('open');
+}
+function renderWhy() {
+  $('#whyChips').innerHTML = WHY.map(r => `<button type="button" data-r="${r}" class="${wy.reason === r ? 'on' : ''}">${r}</button>`).join('');
+}
+function closeWhy() { $('#whyWrap').classList.remove('open'); wy = null; document.activeElement.blur(); }
+$('#whyChips').onclick = e => { const t = e.target.closest('[data-r]'); if (t) { wy.reason = t.dataset.r; renderWhy(); } };
+$('#why').onsubmit = e => {
+  e.preventDefault();
+  if (!wy.reason) return toast('Pick a reason');
+  const b = state.blocks.find(x => x.id === wy.id), date = wy.date;
+  b.done = (b.done || []).filter(d => d !== date);
+  if (b.reviews) delete b.reviews[date];
+  if (b.finished) delete b.finished[date];
+  b.missedWhy = { ...(b.missedWhy || {}), [date]: { reason: wy.reason, note: $('#whyNote').value.trim() } };
+  save(); closeWhy(); render(); toast('Marked as missed');
+};
+$('#whyClear').onclick = () => { const b = state.blocks.find(x => x.id === wy.id); delete b.missedWhy[wy.date]; save(); closeWhy(); render(); };
+$('#whyCancel').onclick = closeWhy;
+$('#whyBg').onclick = closeWhy;
+$('#missBtn').onclick = () => { const b = state.blocks.find(x => x.id === editing); closeSheet(); openWhy(b, sel); };
+
 $('#rateBtn').onclick = () => { const b = state.blocks.find(x => x.id === editing); closeSheet(); openReview(b, sel); };
 
 // ---- main interactions ----
@@ -805,6 +864,8 @@ $('#fab').onclick = () => openSheet(null);
 $('#list').onclick = e => {
   const c = e.target.closest('[data-check]');
   if (c) return toggleDone(c.dataset.check, sel);
+  const w = e.target.closest('[data-why]');
+  if (w) return openWhy(state.blocks.find(x => x.id === w.dataset.why), sel);
   const blk = e.target.closest('.block');
   if (blk) openSheet(state.blocks.find(x => x.id === blk.dataset.id));
 };
