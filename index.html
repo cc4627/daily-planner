@@ -721,7 +721,7 @@ function renderWeek() {
   const start = weekStart(sel), end = addDays(start, 6);
   const fmt = s => parseDate(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   $('#weekRange').textContent = `${fmt(start)} – ${fmt(end)}`;
-  const planned = {}, done = {}, early = {};
+  const planned = {}, done = {}, early = {}, studyShort = {};
   const gym = { planned: 0, done: 0, missed: 0 }; // gym is counted in sessions, not hours
   for (let i = 0; i < 7; i++) {
     const d = addDays(start, i);
@@ -731,7 +731,9 @@ function renderWeek() {
       planned[b.cat] = (planned[b.cat] || 0) + dur(b);
       if (isDone(b, d)) {
         done[b.cat] = (done[b.cat] || 0) + doneMins(b, d);
-        early[b.cat] = (early[b.cat] || 0) + dur(b) - doneMins(b, d);
+        // study time not done counts as missed, not as finishing early
+        const short = Math.max(0, dur(b) - doneMins(b, d)), into = b.cat === 'study' ? studyShort : early;
+        into[b.cat] = (into[b.cat] || 0) + short;
       }
     });
   }
@@ -754,7 +756,7 @@ function renderWeek() {
       <span class="val">${fmtMoney(spent)} /</span>
       <input class="goal" type="number" inputmode="decimal" min="0" max="100000" data-goal="spend" value="${budget}"></div>`;
   })();
-  const missed = {}, days = [];
+  const missed = { ...studyShort }, days = [];
   for (let i = 0; i < 7; i++) {
     const d = addDays(start, i), bl = blocksOn(d);
     bl.forEach(b => { if (b.cat !== 'other' && b.cat !== 'gym' && isMissed(b, d)) missed[b.cat] = (missed[b.cat] || 0) + dur(b); });
@@ -773,9 +775,9 @@ function renderWeek() {
     + `<div class="row" style="margin-top:14px"><span class="lbl">Total</span>
       <div class="stack"><i style="width:${pct(dn, tot)}%;background:var(--ok)"></i><i style="width:${pct(ea, tot)}%;background:var(--early)"></i><i style="width:${pct(ms, tot)}%;background:var(--miss)"></i></div>
       <span class="val">${fmtHours(dn)} / ${fmtHours(tot)}</span></div>
-    <div class="legend"><span style="--c:var(--ok)">Achieved</span>${ea ? '<span style="--c:var(--early)">Finished early</span>' : ''}<span style="--c:var(--miss)">Not checked off</span><span style="--c:var(--line)">Still to come</span></div>
+    <div class="legend"><span style="--c:var(--ok)">Achieved</span>${ea ? '<span style="--c:var(--early)">Finished early</span>' : ''}<span style="--c:var(--miss)">Missed</span><span style="--c:var(--line)">Still to come</span></div>
     <p class="hint">You've achieved ${fmtHours(dn)} of the ${fmtHours(tot)} you projected this week (${Math.round(pct(dn, tot))}%)${gym.planned ? `, and done ${gym.done} of ${gym.planned} gym sessions` : ''}. Total hours don't include gym.</p>`)
-  + (tot ? '' : '<div class="legend"><span style="--c:var(--ok)">Done</span><span style="--c:var(--miss)">Not checked off</span><span style="--c:var(--line)">Still to come</span></div>');
+  + (tot ? '' : '<div class="legend"><span style="--c:var(--ok)">Done</span><span style="--c:var(--miss)">Missed</span><span style="--c:var(--line)">Still to come</span></div>');
   const rs = { study: [], gym: [] };
   days.forEach(([d, bl]) => bl.forEach(b => { const r = reviewOf(b, d); if (r && rs[b.cat] && isDone(b, d)) rs[b.cat].push(r); }));
   const avg = a => a.length ? Math.round(a.reduce((x, r) => x + r.score, 0) / a.length * 10) / 10 : null;
