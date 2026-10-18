@@ -106,6 +106,8 @@ header .sub { display: block; font-size: 14px; font-weight: 500; color: var(--mu
 .pillar h2 i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .pillar h2 em { margin-left: auto; font-style: normal; font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .pillar .from { font-size: 13px; color: var(--muted); margin: -4px 0 12px; }
+.amount { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); font-size: 18px; font-weight: 600; }
+.amount + .hint { margin: 6px 0 0; }
 .recap-link { display: flex; align-items: center; gap: 12px; margin: 14px 16px 0; padding: 14px; border-radius: 16px; background: var(--accent-soft); color: var(--accent); font-weight: 600; width: calc(100% - 32px); text-align: left; }
 .recap-link b { margin-left: auto; font-size: 18px; }
 .gap { font-size: 13px; color: var(--muted); text-align: center; padding: 2px 0; }
@@ -130,7 +132,7 @@ nav.tabs button.on { color: var(--accent); }
 .row .track { flex: 1; height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
 .row .fill { height: 100%; border-radius: 5px; }
 .row .val { min-width: 64px; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; font-size: 14px; }
-.goal { width: 56px; padding: 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); text-align: center; }
+.goal { width: 66px; padding: 6px 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); text-align: center; }
 .btn { display: block; width: 100%; padding: 13px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font-weight: 600; margin-top: 8px; }
 .btn.primary { background: var(--accent); color: #fff; }
 .btn.danger { background: transparent; color: var(--danger); }
@@ -199,7 +201,7 @@ nav.tabs button.on { color: var(--accent); }
   <header><h1>This week<span class="sub" id="weekRange"></span></h1></header>
   <div class="panel">
     <div class="card"><h2>Planned vs. weekly goal</h2><div id="weekBars"></div>
-      <p class="hint">Hours per week, except gym, which is sessions per week. Tap a goal number to change it.</p></div>
+      <p class="hint">Hours per week, except gym (sessions) and spending (your weekly budget, from the amounts in your daily recaps). Tap a goal number to change it.</p></div>
     <div class="card"><h2>Projected vs achieved</h2><div id="weekDone"></div></div>
     <div class="card"><h2>RLFE this week</h2><div id="weekRecap"></div></div>
     <div class="card"><h2>Session scores</h2><div id="weekScores"></div></div>
@@ -297,6 +299,7 @@ const $ = s => document.querySelector(s);
 const color = c => `var(--${c})`;
 
 // ---- state ----
+const DEFAULT_GOALS = { college: 15, study: 10, work: 16, gymSessions: 4, spend: 200 };
 let state = load();
 let sel = isoDate(new Date());
 let editing = null;   // block id being edited, or null for new
@@ -305,9 +308,9 @@ let form = {};        // sheet form state: cat, rep, days
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
-    if (s && Array.isArray(s.blocks)) return { goals: {}, ...s };
+    if (s && Array.isArray(s.blocks)) return { ...s, goals: { ...DEFAULT_GOALS, ...(s.goals || {}) } };
   } catch (e) {}
-  return { blocks: [], goals: { college: 15, study: 12, gym: 5, work: 16 } };
+  return { blocks: [], goals: { ...DEFAULT_GOALS } };
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { toast('Could not save'); }
@@ -429,6 +432,7 @@ const RECAP_Q = {
     { k: 'macros', q: 'Macros (protein etc.)', type: 'chips', opts: HIT },
   ],
   fin: [
+    { k: 'spent', q: 'How much did you spend today?', type: 'amount' },
     { k: 'spend', q: 'Any silly or impulse spending?', type: 'chips', opts: [['none', 'None'], ['little', 'A little'], ['lot', 'Yes, a lot']] },
   ],
   edu: [
@@ -471,6 +475,8 @@ function recapScore(date) {
   if (a.trained && a.cals && a.macros && (a.trained === 'no' || a.trainQ))
     out.lei = (a.trained === 'yes' ? 10 * curve(a.trainQ) : 0) + 7.5 * hit(a.cals) + 7.5 * hit(a.macros);
   if (a.spend) out.fin = { none: 25, little: 7.5, lot: 0 }[a.spend];
+  // over the weekly spending budget (counting up to this day) means no Finances points
+  if (out.fin !== null && state.goals.spend && weekSpent(date) > state.goals.spend) out.fin = 0;
   const needClasses = blocksOn(date).some(b => b.cat === 'college');
   if (a.studied && (a.studied === 'no' || a.studyQ) && (!needClasses || a.classes)) {
     // study quality, scaled down when planned study time wasn't all done
@@ -482,6 +488,13 @@ function recapScore(date) {
   if (parts.every(x => x !== null)) out.total = Math.round(parts.reduce((x, y) => x + y, 0));
   return out;
 }
+// spending recorded in recaps from the start of the week up to and including date
+function weekSpent(date) {
+  let t = 0;
+  for (let d = weekStart(date); d <= date; d = addDays(d, 1)) t += +(((state.recaps || {})[d] || {}).spent || 0);
+  return t;
+}
+const fmtMoney = n => (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
 function renderRecap() {
   const d = parseDate(sel), today = isoDate(new Date());
   $('#rcDate').textContent = (sel === today ? 'Today · ' : '') + d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
@@ -501,7 +514,9 @@ function renderRecap() {
     <p class="from">${p.sub}${fromPlan[k] ? ' · ' + fromPlan[k] : ''}</p>
     ${RECAP_Q[k].filter(q => !q.when || q.when(a, sel)).map(q => {
       let ctl;
-      if (q.type === 'scale') ctl = `<div class="scale">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-rk="${q.k}" data-v="${n}" class="${a[q.k] === n ? 'on' : ''}">${n}</button>`).join('')}</div>
+      if (q.type === 'amount') { const wk = weekSpent(sel); ctl = `<input class="amount" type="number" inputmode="decimal" min="0" step="any" placeholder="0" data-amount="${q.k}" value="${a[q.k] ?? ''}">
+        <p class="hint">This week so far: <b>${fmtMoney(wk)}</b> of your ${fmtMoney(state.goals.spend || 0)} budget${wk > (state.goals.spend || 0) ? ' — over budget, so Finances scores 0 until next week' : ''}.</p>`; }
+      else if (q.type === 'scale') ctl = `<div class="scale">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-rk="${q.k}" data-v="${n}" class="${a[q.k] === n ? 'on' : ''}">${n}</button>`).join('')}</div>
         <div class="scale-ends"><span>${q.lo}</span><span>${q.hi}</span></div>`;
       else ctl = `<div class="chips">${q.opts.map(([v, l]) => {
         const on = q.type === 'multi' ? (a[q.k] || []).includes(v) : a[q.k] === v;
@@ -529,6 +544,12 @@ $('#rcPillars').onclick = e => {
   } else setRecap(k, t.dataset.s !== undefined ? t.dataset.s : +t.dataset.v);
   renderRecap(); renderDay();
 };
+// amount: save while typing, refresh the scores when done
+$('#rcPillars').oninput = e => {
+  const t = e.target.closest('[data-amount]'); if (!t) return;
+  setRecap(t.dataset.amount, t.value === '' ? undefined : Math.max(0, +t.value));
+};
+$('#rcPillars').addEventListener('change', e => { if (e.target.closest('[data-amount]')) { renderRecap(); renderDay(); } });
 document.querySelectorAll('[data-note]').forEach(el => el.oninput = () => setRecap(el.dataset.note, el.value));
 $('#rcPrev').onclick = () => { sel = addDays(sel, -1); render(); };
 $('#rcNext').onclick = () => { sel = addDays(sel, 1); render(); };
@@ -726,7 +747,13 @@ function renderWeek() {
       <div class="track"><div class="fill" style="width:${pct}%;background:${color(c)}"></div></div>
       <span class="val">${fmtHours(p)} /</span>
       <input class="goal" type="number" inputmode="decimal" min="0" max="100" data-goal="${c}" value="${goal}"></div>`;
-  }).join('');
+  }).join('') + (() => {
+    const budget = state.goals.spend || 0, spent = weekSpent(end);
+    return `<div class="row"><span class="lbl">Spending</span>
+      <div class="track"><div class="fill" style="width:${budget ? Math.min(100, spent / budget * 100) : 0}%;background:${spent > budget ? 'var(--danger)' : 'var(--fin)'}"></div></div>
+      <span class="val">${fmtMoney(spent)} /</span>
+      <input class="goal" type="number" inputmode="decimal" min="0" max="100000" data-goal="spend" value="${budget}"></div>`;
+  })();
   const missed = {}, days = [];
   for (let i = 0; i < 7; i++) {
     const d = addDays(start, i), bl = blocksOn(d);
@@ -978,9 +1005,17 @@ async function syncInbox() {
     else { state.blocks.push({ done: [], ...b }); added++; }
     seen[b.id] = sig;
   });
-  if (!added && !changed && !removed) return;
+  let goals = false;
+  if (inbox.goals && typeof inbox.goals === 'object') {
+    const sig = JSON.stringify(inbox.goals);
+    if (seen['@goals'] !== sig) {
+      Object.entries(inbox.goals).forEach(([k, v]) => { if (typeof v === 'number' && v >= 0) state.goals[k] = v; });
+      seen['@goals'] = sig; goals = true;
+    }
+  }
+  if (!added && !changed && !removed && !goals) return;
   save(); render();
-  const parts = [added && `${added} added`, changed && `${changed} updated`, removed && `${removed} removed`].filter(Boolean);
+  const parts = [added && `${added} added`, changed && `${changed} updated`, removed && `${removed} removed`, goals && 'goals updated'].filter(Boolean);
   toast(`Plan from Claude: ${parts.join(', ')}`);
 }
 syncInbox();

@@ -1,4 +1,5 @@
 {
+  "goals": {"study": 10, "gymSessions": 4, "spend": 200},
   "blocks": [
     {"id": "p1016-study1", "cat": "other", "title": "Driving & lunch", "date": "2026-10-16", "start": "12:00", "end": "13:30", "notes": "", "repeat": "once"},
     {"id": "p1016-gym", "cat": "gym", "title": "Gym", "date": "2026-10-16", "start": "14:00", "end": "16:00", "notes": "", "repeat": "once"},
