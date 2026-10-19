@@ -10,7 +10,13 @@
     {"id": "p1017-work", "cat": "work", "title": "Work", "date": "2026-10-17", "start": "10:00", "end": "16:30", "notes": "", "repeat": "once"},
     {"id": "p1017-train", "cat": "gym", "title": "Training", "date": "2026-10-17", "start": "17:00", "end": "19:00", "notes": "", "repeat": "once"},
     {"id": "p1018-work", "cat": "work", "title": "Work", "date": "2026-10-18", "start": "07:30", "end": "16:30", "notes": "", "repeat": "once"},
-    {"id": "p1018-study", "cat": "study", "title": "Study session", "date": "2026-10-18", "start": "17:30", "end": "20:00", "notes": "", "repeat": "once"}
+    {"id": "p1018-study", "cat": "study", "title": "Study session", "date": "2026-10-18", "start": "17:30", "end": "20:00", "notes": "", "repeat": "once"},
+    {"id": "p1019-study1", "cat": "study", "title": "Study session", "date": "2026-10-19", "start": "11:35", "end": "16:00", "notes": "Have a small snack at your desk around 1:30 (fruit, yoghurt, nuts) so you're not running on empty.", "repeat": "once"},
+    {"id": "p1019-lunch", "cat": "other", "title": "Lunch: main pre-training meal", "date": "2026-10-19", "start": "16:00", "end": "17:00", "notes": "Biggest meal of the day, 3-4 hours before training: plenty of carbs (rice, pasta, potatoes, wraps) plus protein (chicken, mince, eggs, fish). Go easy on fat and fibre so it digests in time.", "repeat": "once"},
+    {"id": "p1019-study2", "cat": "study", "title": "Study session", "date": "2026-10-19", "start": "17:00", "end": "18:00", "notes": "", "repeat": "once"},
+    {"id": "p1019-travel", "cat": "other", "title": "Travel home", "date": "2026-10-19", "start": "18:00", "end": "19:00", "notes": "", "repeat": "once"},
+    {"id": "p1019-snack", "cat": "other", "title": "Pre-training snack", "date": "2026-10-19", "start": "19:00", "end": "19:15", "notes": "Light and carb-based, about an hour before: banana, toast with honey or jam, rice cakes, or a bowl of cereal. Drink water.", "repeat": "once"},
+    {"id": "p1019-train", "cat": "gym", "title": "Training", "date": "2026-10-19", "start": "20:00", "end": "22:00", "notes": "", "repeat": "once"}
   ],
   "remove": ["p1016-lunch", "p1016-study2", "p1016-dinner"]
 }
