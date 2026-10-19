@@ -439,6 +439,7 @@ const RECAP_Q = {
   ],
   edu: [
     { k: 'studied', q: 'Did you study?', type: 'chips', opts: YN },
+    { k: 'studyTime', q: 'How long did you study?', type: 'studytime', when: a => a.studied === 'yes' },
     { k: 'studyQ', q: 'How effective was it?', type: 'scale', lo: 'Got nothing done', hi: 'Nailed it', when: a => a.studied === 'yes' },
     { k: 'classes', q: 'College classes', type: 'chips', opts: [['all', 'Went to all'], ['some', 'Missed some'], ['missed', 'Missed them all']], when: (a, d) => blocksOn(d).some(b => b.cat === 'college') },
   ],
@@ -463,8 +464,11 @@ function planFacts(date) {
 function recapAnswers(date) {
   const saved = (state.recaps || {})[date] || {}, f = planFacts(date), a = {};
   ['trained', 'trainQ', 'studied', 'studyQ', 'classes'].forEach(k => { if (f[k] !== undefined) a[k] = f[k]; });
+  if (f.studyMins) a.studyTime = f.studyMins;
   return { ...a, ...saved };
 }
+// time studied: what was entered in the recap, else ticked-off study, else the full plan
+const studyTimeOf = (a, f) => a.studyTime ?? (f.studyMins || f.studyPlanned || 0);
 // 1..5 rating to 0..1 on a steep curve: a 3 is only 30%, full marks need a 5
 const curve = q => [0, 0, 0.1, 0.3, 0.6, 1][q] || 0;
 // each area is scored 0..25; null until its questions are answered
@@ -482,7 +486,7 @@ function recapScore(date) {
   const needClasses = blocksOn(date).some(b => b.cat === 'college');
   if (a.studied && (a.studied === 'no' || a.studyQ) && (!needClasses || a.classes)) {
     // study quality, scaled down when planned study time wasn't all done
-    const f = planFacts(date), share = f.studyPlanned ? Math.min(1, f.studyMins / f.studyPlanned) : 1;
+    const f = planFacts(date), share = f.studyPlanned ? Math.min(1, studyTimeOf(a, f) / f.studyPlanned) : 1;
     const st = a.studied === 'yes' ? curve(a.studyQ) * share : 0;
     out.edu = needClasses ? 25 * (0.7 * st + 0.3 * { all: 1, some: 0.25, missed: 0 }[a.classes]) : 25 * st;
   }
@@ -520,6 +524,9 @@ function renderRecap() {
         <p class="hint">This week so far: <b>${fmtMoney(wk)}</b> of your ${fmtMoney(state.goals.spend || 0)} budget${wk > (state.goals.spend || 0) ? ' — over budget, so Finances scores 0 until next week' : ''}.</p>`; }
       else if (q.type === 'scale') ctl = `<div class="scale">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-rk="${q.k}" data-v="${n}" class="${a[q.k] === n ? 'on' : ''}">${n}</button>`).join('')}</div>
         <div class="scale-ends"><span>${q.lo}</span><span>${q.hi}</span></div>`;
+      else if (q.type === 'studytime') { const t = studyTimeOf(a, f), pl = f.studyPlanned;
+        ctl = `<div class="slider"><input type="range" data-range="studyTime" min="0" max="${Math.max(pl + 120, 360)}" step="5" value="${t}"><output id="rco-studyTime">${fmtDur(t)}</output></div>
+        <p class="hint">${pl ? `Planned today: ${fmtDur(pl)}. Studying less than planned lowers Education.` : 'No study was planned today.'}</p>`; }
       else ctl = `<div class="chips">${q.opts.map(([v, l]) => {
         const on = q.type === 'multi' ? (a[q.k] || []).includes(v) : a[q.k] === v;
         return `<button type="button" data-rk="${q.k}" data-s="${v}" data-multi="${q.type === 'multi' ? 1 : ''}" class="${on ? 'on' : ''}">${l}</button>`;
@@ -533,7 +540,7 @@ function renderRecap() {
 }
 function setRecap(k, v) {
   const recaps = state.recaps || (state.recaps = {});
-  recaps[sel] = { ...recapAnswers(sel), ...(recaps[sel] || {}), [k]: v };
+  recaps[sel] = { ...(recaps[sel] || {}), [k]: v };
   save();
 }
 $('#rcPillars').onclick = e => {
@@ -548,10 +555,12 @@ $('#rcPillars').onclick = e => {
 };
 // amount: save while typing, refresh the scores when done
 $('#rcPillars').oninput = e => {
+  const r = e.target.closest('[data-range]');
+  if (r) { setRecap(r.dataset.range, +r.value); $(`#rco-${r.dataset.range}`).textContent = fmtDur(+r.value); return; }
   const t = e.target.closest('[data-amount]'); if (!t) return;
   setRecap(t.dataset.amount, t.value === '' ? undefined : Math.max(0, +t.value));
 };
-$('#rcPillars').addEventListener('change', e => { if (e.target.closest('[data-amount]')) { renderRecap(); renderDay(); } });
+$('#rcPillars').addEventListener('change', e => { if (e.target.closest('[data-amount], [data-range]')) { renderRecap(); renderDay(); } });
 document.querySelectorAll('[data-note]').forEach(el => el.oninput = () => setRecap(el.dataset.note, el.value));
 $('#rcPrev').onclick = () => { sel = addDays(sel, -1); render(); };
 $('#rcNext').onclick = () => { sel = addDays(sel, 1); render(); };
