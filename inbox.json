@@ -11,16 +11,12 @@
     {"id": "p1017-train", "cat": "gym", "title": "Training", "date": "2026-10-17", "start": "17:00", "end": "19:00", "notes": "", "repeat": "once"},
     {"id": "p1018-work", "cat": "work", "title": "Work", "date": "2026-10-18", "start": "07:30", "end": "16:30", "notes": "", "repeat": "once"},
     {"id": "p1018-study", "cat": "study", "title": "Study session", "date": "2026-10-18", "start": "17:30", "end": "20:00", "notes": "", "repeat": "once"},
-    {"id": "p1019-study1", "cat": "study", "title": "Study block 1", "date": "2026-10-19", "start": "11:35", "end": "12:25", "notes": "50 on, 10 off. Take the 10-minute break away from your desk and your phone.", "repeat": "once"},
-    {"id": "p1019-study2", "cat": "study", "title": "Study block 2", "date": "2026-10-19", "start": "12:35", "end": "13:25", "notes": "50 on, 10 off. Take the 10-minute break away from your desk and your phone.", "repeat": "once"},
-    {"id": "p1019-study3", "cat": "study", "title": "Study block 3", "date": "2026-10-19", "start": "13:35", "end": "14:25", "notes": "50 on, 10 off. Take the 10-minute break away from your desk and your phone.", "repeat": "once"},
-    {"id": "p1019-study4", "cat": "study", "title": "Study block 4", "date": "2026-10-19", "start": "14:35", "end": "15:25", "notes": "50 on, 10 off. Take the 10-minute break away from your desk and your phone.", "repeat": "once"},
+    {"id": "p1019-study1", "cat": "study", "title": "Study: block group 1", "date": "2026-10-19", "start": "11:35", "end": "15:25", "focus": 200, "notes": "4 x 50 min on, 10 min off: 11:35, 12:35, 1:35, 2:35. Take the breaks away from your desk and phone. 3h 20m focused.", "repeat": "once"},
     {"id": "p1019-lunch", "cat": "other", "title": "Lunch: main pre-training meal", "date": "2026-10-19", "start": "15:25", "end": "16:25", "notes": "3.5-4.5 hours before training, the sweet spot. Carbs (rice, pasta, potatoes, wraps) plus protein (chicken, mince, eggs, fish). Go easy on fat and fibre so it digests in time.", "repeat": "once"},
-    {"id": "p1019-study5", "cat": "study", "title": "Study block 5", "date": "2026-10-19", "start": "16:25", "end": "17:15", "notes": "50 on, 10 off. Take the 10-minute break away from your desk and your phone.", "repeat": "once"},
-    {"id": "p1019-study6", "cat": "study", "title": "Study block 6", "date": "2026-10-19", "start": "17:25", "end": "18:00", "notes": "Short final block, 35 minutes. Wrap up and note where to start next time.", "repeat": "once"},
+    {"id": "p1019-study2", "cat": "study", "title": "Study: block group 2", "date": "2026-10-19", "start": "16:25", "end": "18:00", "focus": 85, "notes": "50 min on (4:25-5:15), 10 min off, then 35 min (5:25-6:00). 1h 25m focused.", "repeat": "once"},
     {"id": "p1019-travel", "cat": "other", "title": "Travel home", "date": "2026-10-19", "start": "18:00", "end": "19:00", "notes": "", "repeat": "once"},
     {"id": "p1019-snack", "cat": "other", "title": "Pre-training snack", "date": "2026-10-19", "start": "19:00", "end": "19:15", "notes": "Light and carb-based, about an hour before: banana, toast with honey or jam, rice cakes, or a bowl of cereal. Drink water.", "repeat": "once"},
     {"id": "p1019-train", "cat": "gym", "title": "Training", "date": "2026-10-19", "start": "20:00", "end": "22:00", "notes": "", "repeat": "once"}
   ],
-  "remove": ["p1016-lunch", "p1016-study2", "p1016-dinner"]
+  "remove": ["p1016-dinner", "p1016-lunch", "p1016-study2", "p1019-study3", "p1019-study4", "p1019-study5", "p1019-study6"]
 }

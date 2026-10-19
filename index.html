@@ -323,6 +323,8 @@ function addDays(s, n) { const d = parseDate(s); d.setDate(d.getDate() + n); ret
 function weekStart(s) { const d = parseDate(s); const off = (d.getDay() + 6) % 7; return addDays(s, -off); } // Monday
 function mins(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
 function dur(b) { let x = mins(b.end) - mins(b.start); return x < 0 ? x + 1440 : x; }
+// planned working time: a block with built-in breaks (e.g. 50 on, 10 off) sets focus minutes
+const planMins = b => b.focus ? Math.min(b.focus, dur(b)) : dur(b);
 function fmtTime(t) {
   const [h, m] = t.split(':').map(Number);
   return `${(h % 12) || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
@@ -385,7 +387,7 @@ function doneMins(b, date) {
   const r = b.cat === 'study' && b.reviews && b.reviews[date];
   if (r && r.mins !== undefined) return r.mins;
   const f = b.finished && b.finished[date];
-  if (!f) return dur(b);
+  if (!f) return planMins(b);
   return Math.max(0, Math.min(dur(b), mins(f) - mins(b.start)));
 }
 
@@ -453,7 +455,7 @@ function planFacts(date) {
   if (college.length) { const n = doneOf('college').length; f.classes = n === college.length ? 'all' : n ? 'some' : (isMissed(college[0], date) ? 'missed' : undefined); }
   f.workMins = doneOf('work').reduce((x, b) => x + doneMins(b, date), 0);
   f.studyMins = study.reduce((x, b) => x + doneMins(b, date), 0);
-  f.studyPlanned = bl.filter(b => b.cat === 'study').reduce((x, b) => x + dur(b), 0);
+  f.studyPlanned = bl.filter(b => b.cat === 'study').reduce((x, b) => x + planMins(b), 0);
   f.missed = bl.filter(b => b.missedWhy && b.missedWhy[date]);
   f.gymCount = gym.length;
   return f;
@@ -561,7 +563,7 @@ const REVIEWED = ['study', 'gym'];
 const MINS = [0, 5, 10, 15, 30, 45, 60];
 const QUESTIONS = {
   study: [
-    { k: 'mins', q: 'How much time did you actually study?', type: 'range', min: 0, max: b => dur(b) + 60, step: 5, fmt: v => fmtDur(v) },
+    { k: 'mins', q: 'How much time did you actually study?', type: 'range', min: 0, max: b => planMins(b) + 60, step: 5, fmt: v => fmtDur(v) },
     { k: 'topics', q: 'Topics covered', type: 'range', min: 0, max: () => 15, step: 1, fmt: v => v === 15 ? '15+' : String(v) },
     { k: 'conf', q: 'Confidence in the topics you covered', type: 'range', min: 0, max: () => 100, step: 5, fmt: v => v + '%' },
     { k: 'effect', q: 'How effective was it?', type: 'scale', lo: 'Got nothing done', hi: 'Nailed it' },
@@ -597,7 +599,7 @@ const reviewOf = (b, date) => b.reviews && b.reviews[date];
 let rv = null; // { id, date, answers }
 function openReview(b, date) {
   rv = { id: b.id, date, answers: { ...(reviewOf(b, date) || {}) } };
-  if (b.cat === 'study') rv.answers = { mins: dur(b), topics: 0, conf: 50, ...rv.answers };
+  if (b.cat === 'study') rv.answers = { mins: planMins(b), topics: 0, conf: 50, ...rv.answers };
   $('#rvTitle').textContent = `${CATS[b.cat].icon} How was ${b.title}?`;
   $('#rvNotes').value = rv.answers.notes || '';
   renderReview();
@@ -619,7 +621,7 @@ function renderReview() {
 }
 function updateReviewScore() {
   const b = state.blocks.find(x => x.id === rv.id);
-  const sc = scoreOf(b.cat, rv.answers, b.cat === 'study' ? dur(b) : doneMins(b, rv.date));
+  const sc = scoreOf(b.cat, rv.answers, b.cat === 'study' ? planMins(b) : doneMins(b, rv.date));
   $('#rvScore').textContent = sc === null ? '–' : sc;
 }
 // sliders update in place so dragging isn't interrupted
@@ -638,7 +640,7 @@ $('#rvQuestions').onclick = e => {
 $('#review').onsubmit = e => {
   e.preventDefault();
   const b = state.blocks.find(x => x.id === rv.id), a = rv.answers;
-  const sc = scoreOf(b.cat, a, b.cat === 'study' ? dur(b) : doneMins(b, rv.date));
+  const sc = scoreOf(b.cat, a, b.cat === 'study' ? planMins(b) : doneMins(b, rv.date));
   if (sc === null) return toast('Rate effectiveness and intensity first');
   a.notes = $('#rvNotes').value.trim(); a.score = sc;
   b.reviews = { ...(b.reviews || {}), [rv.date]: a };
@@ -683,7 +685,7 @@ function renderDay() {
 
   const blocks = blocksOn(sel);
   const totals = {};
-  blocks.forEach(b => totals[b.cat] = (totals[b.cat] || 0) + dur(b));
+  blocks.forEach(b => totals[b.cat] = (totals[b.cat] || 0) + planMins(b));
   $('#summary').innerHTML = Object.keys(CATS).filter(c => totals[c])
     .map(c => `<div class="chip"><i style="background:${color(c)}"></i>${CATS[c].name} ${fmtHours(totals[c])}</div>`).join('');
 
@@ -704,7 +706,7 @@ function renderDay() {
     html += `<div class="block ${st} ${isNow ? 'now' : ''}" data-id="${b.id}">
       <div class="bar" style="background:${color(b.cat)}"></div>
       <div class="body">
-        <div class="time">${fmtTime(b.start)} – ${fmtTime(b.end)} · ${fmtHours(dur(b))}${done && b.finished && b.finished[sel] ? ` · <b>finished ${fmtTime(b.finished[sel])} (${fmtHours(doneMins(b, sel))})</b>` : ''}</div>
+        <div class="time">${fmtTime(b.start)} – ${fmtTime(b.end)} · ${b.focus ? fmtHours(planMins(b)) + ' focus' : fmtHours(dur(b))}${done && b.finished && b.finished[sel] ? ` · <b>finished ${fmtTime(b.finished[sel])} (${fmtHours(doneMins(b, sel))})</b>` : ''}</div>
         <div class="title">${CATS[b.cat].icon} ${esc(b.title)}</div>
         ${b.notes ? `<div class="notes">${esc(b.notes)}</div>` : ''}
         <div class="tags">${b.repeat === 'weekly' ? '<span class="tag" style="color:var(--muted)">↻ weekly</span>' : ''}
@@ -728,11 +730,11 @@ function renderWeek() {
     blocksOn(d).forEach(b => {
       if (b.cat === 'other') return; // driving, meals and breaks aren't goals
       if (b.cat === 'gym') { gym.planned++; if (isDone(b, d)) gym.done++; else if (isMissed(b, d)) gym.missed++; return; }
-      planned[b.cat] = (planned[b.cat] || 0) + dur(b);
+      planned[b.cat] = (planned[b.cat] || 0) + planMins(b);
       if (isDone(b, d)) {
         done[b.cat] = (done[b.cat] || 0) + doneMins(b, d);
         // study time not done counts as missed, not as finishing early
-        const short = Math.max(0, dur(b) - doneMins(b, d)), into = b.cat === 'study' ? studyShort : early;
+        const short = Math.max(0, planMins(b) - doneMins(b, d)), into = b.cat === 'study' ? studyShort : early;
         into[b.cat] = (into[b.cat] || 0) + short;
       }
     });
@@ -759,7 +761,7 @@ function renderWeek() {
   const missed = { ...studyShort }, days = [];
   for (let i = 0; i < 7; i++) {
     const d = addDays(start, i), bl = blocksOn(d);
-    bl.forEach(b => { if (b.cat !== 'other' && b.cat !== 'gym' && isMissed(b, d)) missed[b.cat] = (missed[b.cat] || 0) + dur(b); });
+    bl.forEach(b => { if (b.cat !== 'other' && b.cat !== 'gym' && isMissed(b, d)) missed[b.cat] = (missed[b.cat] || 0) + planMins(b); });
     if (bl.length) days.push([d, bl]);
   }
   const sum = o => Object.values(o).reduce((a, b) => a + b, 0);
