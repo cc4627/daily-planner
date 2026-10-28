@@ -110,6 +110,57 @@ header .sub { display: block; font-size: 14px; font-weight: 500; color: var(--mu
 .amount + .hint { margin: 6px 0 0; }
 .recap-link { display: flex; align-items: center; gap: 12px; margin: 14px 16px 0; padding: 14px; border-radius: 16px; background: var(--accent-soft); color: var(--accent); font-weight: 600; width: calc(100% - 32px); text-align: left; }
 .recap-link b { margin-left: auto; font-size: 18px; }
+.sheet select { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); font-size: 16px; }
+.seg2 { display: flex; margin: 4px 16px 10px; background: var(--card); border-radius: 12px; padding: 4px; }
+.seg2 button { flex: 1; padding: 9px; border-radius: 9px; font-weight: 600; color: var(--muted); }
+.seg2 button.on { background: var(--accent); color: #fff; }
+.tray { margin: 0 16px 4px; }
+.tray .hint { margin: 0 0 10px; }
+.subj { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; background: var(--bg); border: 2px solid transparent; font-weight: 600; font-size: 14px; margin: 0 6px 6px 0; }
+.subj i { width: 10px; height: 10px; border-radius: 50%; }
+.subj.armed { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.linkbtn { color: var(--accent); font-weight: 600; font-size: 14px; padding: 6px 0; }
+.slots { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+.slot { display: flex; gap: 10px; align-items: stretch; }
+.slot .num { width: 18px; padding-top: 14px; color: var(--muted); font-weight: 700; text-align: center; flex: none; }
+.cell { flex: 1; min-height: 58px; border-radius: 14px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; text-align: left; }
+.cell.empty { border: 2px dashed var(--line); color: var(--muted); justify-content: center; font-size: 14px; }
+.cell.empty.armed { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.cell.full { background: var(--card); }
+.cell.full.done { background: var(--ok-bg); }
+.cell .bar { width: 5px; align-self: stretch; border-radius: 3px; flex: none; }
+.cell .txt { flex: 1; min-width: 0; }
+.cell .txt b { display: block; font-size: 16px; }
+.cell .txt small { display: block; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.cell.done .check { background: var(--ok); border-color: var(--ok); }
+.swatches { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.swatches button { width: 28px; height: 28px; border-radius: 50%; border: 3px solid transparent; }
+.swatches button.on { border-color: var(--text); }
+.subedit { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.subedit .row2 { display: flex; gap: 8px; }
+.subedit input { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-size: 16px; }
+.stepper { display: flex; align-items: center; gap: 14px; }
+.stepper button { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 22px; font-weight: 700; }
+.stepper b { font-size: 20px; min-width: 24px; text-align: center; }
+.modrow { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; width: 100%; text-align: left; }
+.modrow.on { background: var(--accent-soft); }
+.modrow .track { flex: 1; height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.modrow .fill { height: 100%; border-radius: 5px; }
+.modrow .lbl { width: 120px; font-weight: 600; font-size: 14px; }
+.modrow .val { width: 44px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bigpct { font-size: 34px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.topic { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "tick name del" ". conf conf"; gap: 6px 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.topic .check { grid-area: tick; width: 26px; height: 26px; }
+.topic.done .check { background: var(--ok); border-color: var(--ok); }
+.topic .tname { grid-area: name; font-weight: 600; text-align: left; overflow-wrap: anywhere; }
+.topic .tdel { grid-area: del; color: var(--muted); font-size: 18px; padding: 2px 6px; }
+.topic .tdel.confirm { color: var(--danger); font-size: 13px; font-weight: 700; }
+.topic .conf { grid-area: conf; display: flex; gap: 6px; }
+.topic .conf button { width: 38px; height: 32px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); font-weight: 600; font-size: 14px; }
+.topic .conf button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.addrow { display: flex; gap: 8px; margin-top: 12px; }
+.addrow input { flex: 1; padding: 11px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); font-size: 16px; }
+.addrow button { padding: 0 16px; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 600; }
 .gap { font-size: 13px; color: var(--muted); text-align: center; padding: 2px 0; }
 
 .empty { text-align: center; color: var(--muted); padding: 48px 24px; }
@@ -120,9 +171,6 @@ header .sub { display: block; font-size: 14px; font-weight: 500; color: var(--mu
 
 nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom); }
-#studyView { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top); bottom: 70px; background: #e8f2fc; }
-#studyView iframe { width: 100%; height: 100%; border: 0; display: block; }
-body.study-open { overflow: hidden; }
 nav.tabs button { flex: 1; padding: 10px 0 12px; font-size: 12px; font-weight: 600; color: var(--muted); }
 nav.tabs button span { display: block; font-size: 20px; }
 nav.tabs button.on { color: var(--accent); }
@@ -200,7 +248,17 @@ nav.tabs button.on { color: var(--accent); }
   </div>
 </section>
 
-<section id="studyView" class="hidden"></section>
+<section id="studyView" class="hidden">
+  <header>
+    <h1>Study<span class="sub" id="stRange"></span></h1>
+    <button class="icon-btn" id="stPrev" aria-label="Previous week">‹</button>
+    <button class="pill" id="stNow">Today</button>
+    <button class="icon-btn" id="stNext" aria-label="Next week">›</button>
+  </header>
+  <div class="seg2" id="stSeg"><button data-sv="plan">Plan</button><button data-sv="prog">Progress</button></div>
+  <div id="stPlan"></div>
+  <div id="stProg" class="panel"></div>
+</section>
 
 <section id="weekView" class="hidden">
   <header><h1>This week<span class="sub" id="weekRange"></span></h1></header>
@@ -288,6 +346,10 @@ nav.tabs button.on { color: var(--accent); }
     <button class="btn hidden" type="button" id="whyClear">It wasn't missed</button>
     <button class="btn danger" type="button" id="whyCancel">Cancel</button>
   </form>
+</div>
+<div id="stWrap">
+  <div class="sheet-bg" id="stBg"></div>
+  <div class="sheet" id="stSheet"></div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -418,6 +480,198 @@ $('#early').onsubmit = e => {
 $('#erFull').onclick = () => { const b = state.blocks.find(x => x.id === er.id), date = er.date; closeEarly(); completeBlock(b, date); };
 $('#erCancel').onclick = closeEarly;
 $('#earlyBg').onclick = closeEarly;
+
+// ---- study tab: weekly study board + module progress ----
+const ST_COLORS = ['#ea580c', '#4f46e5', '#16a34a', '#0e7490', '#9333ea', '#db2777', '#ca8a04', '#475569'];
+function studyState() {
+  if (!state.study) state.study = {
+    subjects: [
+      { id: 's1', name: 'Maths', c: 0 }, { id: 's2', name: 'Solids', c: 1 }, { id: 's3', name: 'Mechanics', c: 2 },
+      { id: 's4', name: 'I&C', c: 3 }, { id: 's5', name: 'Thermodynamics', c: 4 },
+    ],
+    slots: 5, weeks: {}, progress: {},
+  };
+  return state.study;
+}
+let stView = 'plan', stWeek = null, stDay = null, stArmed = null, stMod = null, stEdit = null, stDel = null;
+const stSubj = id => studyState().subjects.find(x => x.id === id);
+const stColor = sb => ST_COLORS[(sb && sb.c) || 0] || ST_COLORS[0];
+const stCells = wk => studyState().weeks[wk] || (studyState().weeks[wk] = {});
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+// each chapter: half for being ticked, half for confidence (5/5 = the full half)
+function modScore(sid) {
+  const ts = studyState().progress[sid] || [];
+  if (!ts.length) return null;
+  return Math.round(ts.reduce((x, t) => x + (t.done ? 0.5 : 0) + (t.conf || 0) / 10, 0) / ts.length * 100);
+}
+function renderStudy() {
+  const S = studyState(), today = isoDate(new Date());
+  if (!stWeek) { stWeek = weekStart(today); stDay = (parseDate(today).getDay() + 6) % 7; }
+  document.querySelectorAll('#stSeg button').forEach(b => b.classList.toggle('on', b.dataset.sv === stView));
+  $('#stPlan').classList.toggle('hidden', stView !== 'plan');
+  $('#stProg').classList.toggle('hidden', stView !== 'prog');
+  ['#stPrev', '#stNow', '#stNext'].forEach(x => $(x).classList.toggle('hidden', stView !== 'plan'));
+  if (stView === 'plan') renderStudyPlan(); else renderStudyProg();
+}
+function renderStudyPlan() {
+  const S = studyState(), cells = stCells(stWeek), today = isoDate(new Date());
+  const fmt = d => parseDate(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const all = Object.values(cells), dn = all.filter(c => c.done).length;
+  $('#stRange').textContent = `${fmt(stWeek)} – ${fmt(addDays(stWeek, 6))} · ${all.length ? `${dn} of ${all.length} blocks done` : 'nothing planned yet'}`;
+  const armed = stSubj(stArmed);
+  let h = `<div class="card tray"><p class="hint">${armed ? `Tap a slot to add <b>${esc(armed.name)}</b>. Tap it again to stop.` : 'Tap a subject, then tap slots to add it.'}</p>
+    <div>${S.subjects.map(sb => `<button class="subj ${stArmed === sb.id ? 'armed' : ''}" data-arm="${sb.id}"><i style="background:${stColor(sb)}"></i>${esc(sb.name || 'Untitled')}</button>`).join('')}</div>
+    <button class="linkbtn" id="stEditBtn">Edit subjects &amp; slots</button></div>`;
+  h += `<div class="week">${[0, 1, 2, 3, 4, 5, 6].map(i => { const d = addDays(stWeek, i), n = Object.keys(cells).filter(k => k.startsWith(i + '-')).length;
+    return `<button class="day ${i === stDay ? 'sel' : ''} ${d === today ? 'today' : ''}" data-sd="${i}"><div class="dn">${DAY_SHORT[parseDate(d).getDay()]}</div><div class="dd">${parseDate(d).getDate()}</div>
+      <div class="dots">${Object.entries(cells).filter(([k]) => k.startsWith(i + '-')).map(([, c]) => `<i style="background:${stColor(stSubj(c.sid))}"></i>`).join('')}</div></button>`; }).join('')}</div>`;
+  h += `<div class="slots">${Array.from({ length: S.slots }, (_, i) => {
+    const c = cells[`${stDay}-${i}`], sb = c && stSubj(c.sid);
+    const cell = !c ? `<button class="cell empty ${armed ? 'armed' : ''}" data-slot="${i}">${armed ? `+ ${esc(armed.name)}` : '+'}</button>`
+      : `<div class="cell full ${c.done ? 'done' : ''}" data-open="${i}"><div class="bar" style="background:${stColor(sb)}"></div>
+          <div class="txt"><b>${esc(sb ? sb.name : 'Deleted subject')}</b><small>${c.text ? esc(c.text) : 'Tap to add the chapter'}</small></div>
+          <button class="check" data-stdone="${i}" aria-label="Mark done">${c.done ? '✓' : ''}</button></div>`;
+    return `<div class="slot"><span class="num">${i + 1}</span>${cell}</div>`;
+  }).join('')}</div>`;
+  $('#stPlan').innerHTML = h;
+}
+function renderStudyProg() {
+  const S = studyState();
+  $('#stRange').textContent = 'How far through each module you are';
+  if (!S.subjects.length) { $('#stProg').innerHTML = '<div class="card"><p class="hint">Add subjects first, on the Plan page under Edit subjects &amp; slots.</p></div>'; return; }
+  if (!stSubj(stMod)) stMod = S.subjects[0].id;
+  const scored = S.subjects.map(sb => modScore(sb.id)).filter(x => x !== null);
+  const overall = scored.length ? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length) : null;
+  let h = `<div class="card"><h2>All modules</h2><div class="bigpct">${overall === null ? '–' : overall + '%'}</div>
+    <p class="hint" style="margin-top:2px">Average of the modules you've added chapters to. Tap a module to open it.</p>
+    ${S.subjects.map(sb => { const m = modScore(sb.id); return `<button class="modrow ${sb.id === stMod ? 'on' : ''}" data-mod="${sb.id}"><span class="lbl">${esc(sb.name || 'Untitled')}</span>
+      <div class="track"><div class="fill" style="width:${m || 0}%;background:${stColor(sb)}"></div></div><span class="val">${m === null ? '–' : m + '%'}</span></button>`; }).join('')}</div>`;
+  const sb = stSubj(stMod), ts = S.progress[stMod] || [], m = modScore(stMod);
+  const ticked = ts.filter(t => t.done).length, rated = ts.filter(t => t.conf);
+  h += `<div class="card"><h2 style="display:flex;justify-content:space-between;color:var(--text);text-transform:none;letter-spacing:0;font-size:18px"><span>${esc(sb.name || 'Untitled')}</span><span>${m === null ? '' : m + '%'}</span></h2>
+    ${ts.length ? `<p class="hint">${ticked} of ${ts.length} ticked · confidence ${rated.length ? (rated.reduce((a, t) => a + t.conf, 0) / rated.length).toFixed(1) + ' / 5 average' : 'not rated yet'}</p>` : '<p class="hint">No chapters yet. Add them below.</p>'}
+    ${ts.map(t => `<div class="topic ${t.done ? 'done' : ''}">
+      <button class="check" data-ttick="${t.id}" aria-label="Tick">${t.done ? '✓' : ''}</button>
+      <button class="tname" data-tren="${t.id}">${esc(t.name || 'Untitled')}</button>
+      <button class="tdel ${stDel === t.id ? 'confirm' : ''}" data-tdel="${t.id}" aria-label="Delete">${stDel === t.id ? 'Delete?' : '×'}</button>
+      <div class="conf">${[1, 2, 3, 4, 5].map(n => `<button data-tconf="${t.id}" data-n="${n}" class="${(t.conf || 0) >= n ? 'on' : ''}">${n}</button>`).join('')}</div></div>`).join('')}
+    <div class="addrow"><input id="stAdd" placeholder="1-10, or names separated by commas" enterkeyhint="done"><button id="stAddBtn">Add</button></div>
+    <p class="hint">Each chapter counts half for being ticked and half for confidence (1 = lost, 5 = exam-ready). Tap a number again to clear it. Tap a name to rename it.</p></div>`;
+  $('#stProg').innerHTML = h;
+}
+function stAddTopics() {
+  const txt = $('#stAdd').value.trim(); if (!txt) return;
+  let names = [];
+  const m = txt.match(/^(\d+)\s*(?:-|–|to)\s*(\d+)$/i);
+  if (m && +m[2] >= +m[1] && +m[2] - +m[1] < 100) for (let i = +m[1]; i <= +m[2]; i++) names.push('Chapter ' + i);
+  if (!names.length) names = txt.split(/\s*[,;\n]\s*/).filter(Boolean);
+  const P = studyState().progress;
+  P[stMod] = (P[stMod] || []).concat(names.map(n => ({ id: uid(), name: n.slice(0, 80), done: false, conf: 0 })));
+  save(); renderStudyProg();
+}
+// bottom sheet for a block or for editing subjects & slots
+function stOpen(html) { $('#stSheet').innerHTML = '<div class="grabber"></div>' + html; $('#stWrap').classList.add('open'); }
+function stClose() { $('#stWrap').classList.remove('open'); stEdit = null; document.activeElement.blur(); renderStudy(); }
+function stOpenBlock(i) {
+  const c = stCells(stWeek)[`${stDay}-${i}`]; stEdit = { slot: i };
+  const S = studyState();
+  stOpen(`<h3>${esc(parseDate(addDays(stWeek, stDay)).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' }))} · slot ${i + 1}</h3>
+    <div class="field"><label>Subject</label><div class="chips">${S.subjects.map(sb => `<button type="button" data-bsub="${sb.id}" class="${c.sid === sb.id ? 'on' : ''}">${esc(sb.name)}</button>`).join('')}</div></div>
+    <div class="field"><label for="stText">Chapter or what to cover</label><input type="text" id="stText" value="${esc(c.text || '')}" placeholder="e.g. Chapter 4: beams"></div>
+    <div class="field"><label>Move to</label><div class="times">
+      <select id="stMoveDay">${[0, 1, 2, 3, 4, 5, 6].map(d => `<option value="${d}" ${d === stDay ? 'selected' : ''}>${DAY_SHORT[(d + 1) % 7]}</option>`).join('')}</select>
+      <select id="stMoveSlot">${Array.from({ length: S.slots }, (_, k) => `<option value="${k}" ${k === i ? 'selected' : ''}>Slot ${k + 1}</option>`).join('')}</select></div></div>
+    <button class="btn primary" id="stSave">Save</button>
+    <button class="btn" id="stToggle">${c.done ? 'Mark not done' : 'Mark done'}</button>
+    <button class="btn danger" id="stRemove">Remove</button>`);
+}
+function stOpenEdit() {
+  const S = studyState(); stEdit = { subjects: true };
+  const used = id => Object.values(S.weeks).reduce((n, w) => n + Object.values(w).filter(c => c.sid === id).length, 0);
+  stOpen(`<h3>Edit subjects &amp; slots</h3>
+    ${S.subjects.map(sb => `<div class="subedit"><div class="row2"><input type="text" data-sname="${sb.id}" value="${esc(sb.name)}">
+      <button class="linkbtn" style="color:var(--danger)" data-sdel="${sb.id}">${stDel === sb.id ? (used(sb.id) ? `Delete + ${used(sb.id)} block${used(sb.id) === 1 ? '' : 's'}` : 'Confirm') : 'Delete'}</button></div>
+      <div class="swatches">${ST_COLORS.map((col, k) => `<button data-scol="${sb.id}" data-k="${k}" class="${(sb.c || 0) === k ? 'on' : ''}" style="background:${col}" aria-label="Colour ${k + 1}"></button>`).join('')}</div></div>`).join('')}
+    <button class="btn" id="stAddSub">+ Add subject</button>
+    <div class="field" style="margin-top:18px"><label>Slots per day</label><div class="stepper"><button id="stSlotMinus">−</button><b>${S.slots}</b><button id="stSlotPlus">+</button></div></div>
+    <button class="btn primary" id="stDone">Done</button>`);
+}
+$('#stSeg').onclick = e => { const b = e.target.closest('[data-sv]'); if (b) { stView = b.dataset.sv; stDel = null; renderStudy(); window.scrollTo(0, 0); } };
+$('#stPrev').onclick = () => { stWeek = addDays(stWeek, -7); renderStudy(); };
+$('#stNext').onclick = () => { stWeek = addDays(stWeek, 7); renderStudy(); };
+$('#stNow').onclick = () => { stWeek = null; renderStudy(); };
+$('#stPlan').onclick = e => {
+  const t = e.target, cells = stCells(stWeek);
+  let b;
+  if ((b = t.closest('[data-arm]'))) { stArmed = stArmed === b.dataset.arm ? null : b.dataset.arm; return renderStudyPlan(); }
+  if ((b = t.closest('[data-sd]'))) { stDay = +b.dataset.sd; return renderStudyPlan(); }
+  if (t.closest('#stEditBtn')) return stOpenEdit();
+  if ((b = t.closest('[data-stdone]'))) { const c = cells[`${stDay}-${b.dataset.stdone}`]; c.done = !c.done; save(); return renderStudyPlan(); }
+  if ((b = t.closest('[data-slot]'))) {
+    if (!stArmed) return toast('Tap a subject first');
+    cells[`${stDay}-${b.dataset.slot}`] = { sid: stArmed, text: '', done: false }; save(); return renderStudyPlan();
+  }
+  if ((b = t.closest('[data-open]'))) stOpenBlock(+b.dataset.open);
+};
+$('#stProg').onclick = e => {
+  const t = e.target, P = studyState().progress, ts = P[stMod] || [];
+  const find = id => ts.find(x => x.id === id);
+  let b;
+  if ((b = t.closest('[data-mod]'))) { stMod = b.dataset.mod; stDel = null; return renderStudyProg(); }
+  if (t.closest('#stAddBtn')) return stAddTopics();
+  if ((b = t.closest('[data-ttick]'))) { const x = find(b.dataset.ttick); x.done = !x.done; save(); return renderStudyProg(); }
+  if ((b = t.closest('[data-tconf]'))) { const x = find(b.dataset.tconf), n = +b.dataset.n; x.conf = x.conf === n ? 0 : n; save(); return renderStudyProg(); }
+  if ((b = t.closest('[data-tren]'))) { const x = find(b.dataset.tren), n = prompt('Rename chapter', x.name); if (n && n.trim()) { x.name = n.trim().slice(0, 80); save(); renderStudyProg(); } return; }
+  if ((b = t.closest('[data-tdel]'))) {
+    if (stDel !== b.dataset.tdel) { stDel = b.dataset.tdel; return renderStudyProg(); }
+    P[stMod] = ts.filter(x => x.id !== stDel); stDel = null; save(); return renderStudyProg();
+  }
+};
+$('#stProg').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'stAdd') stAddTopics(); });
+$('#stSheet').onclick = e => {
+  const t = e.target, S = studyState(), cells = stCells(stWeek);
+  let b;
+  if (stEdit && stEdit.slot !== undefined) {
+    const key = `${stDay}-${stEdit.slot}`, c = cells[key];
+    if ((b = t.closest('[data-bsub]'))) { c.sid = b.dataset.bsub; save(); return stOpenBlock(stEdit.slot); }
+    if (t.closest('#stToggle')) { c.done = !c.done; save(); return stClose(); }
+    if (t.closest('#stRemove')) { delete cells[key]; save(); return stClose(); }
+    if (t.closest('#stSave')) {
+      c.text = $('#stText').value.trim().slice(0, 120);
+      const to = `${$('#stMoveDay').value}-${$('#stMoveSlot').value}`;
+      if (to !== key) {
+        if (cells[to]) [cells[to], cells[key]] = [c, cells[to]]; // swap with whatever is there
+        else { cells[to] = c; delete cells[key]; }
+        stDay = +$('#stMoveDay').value;
+      }
+      save(); return stClose();
+    }
+    return;
+  }
+  if ((b = t.closest('[data-scol]'))) { stSubj(b.dataset.scol).c = +b.dataset.k; save(); return stOpenEdit(); }
+  if ((b = t.closest('[data-sdel]'))) {
+    const id = b.dataset.sdel;
+    if (stDel !== id) { stDel = id; return stOpenEdit(); }
+    S.subjects = S.subjects.filter(x => x.id !== id);
+    Object.values(S.weeks).forEach(w => Object.keys(w).forEach(k => { if (w[k].sid === id) delete w[k]; }));
+    delete S.progress[id]; if (stArmed === id) stArmed = null; stDel = null; save(); return stOpenEdit();
+  }
+  if (t.closest('#stAddSub')) { S.subjects.push({ id: uid(), name: 'New subject', c: S.subjects.length % ST_COLORS.length }); save(); return stOpenEdit(); }
+  if (t.closest('#stSlotPlus')) { S.slots = Math.min(12, S.slots + 1); save(); return stOpenEdit(); }
+  if (t.closest('#stSlotMinus')) {
+    if (S.slots <= 1) return;
+    const last = S.slots - 1, n = Object.values(S.weeks).reduce((x, w) => x + Object.keys(w).filter(k => k.endsWith('-' + last)).length, 0);
+    if (n && !confirm(`Slot ${S.slots} has ${n} block${n === 1 ? '' : 's'} across your weeks. Remove them?`)) return;
+    Object.values(S.weeks).forEach(w => Object.keys(w).forEach(k => { if (k.endsWith('-' + last)) delete w[k]; }));
+    S.slots = last; save(); return stOpenEdit();
+  }
+  if (t.closest('#stDone')) { stDel = null; return stClose(); }
+};
+$('#stSheet').addEventListener('input', e => {
+  const n = e.target.closest('[data-sname]');
+  if (n) { stSubj(n.dataset.sname).name = n.value.slice(0, 40); save(); }
+});
+$('#stBg').onclick = () => { stDel = null; stClose(); };
 
 // ---- daily recap: RLFE, each area worth 25% ----
 const PILLARS = {
@@ -670,25 +924,17 @@ function showTab(name) {
   tab = name;
   document.querySelectorAll('nav.tabs button').forEach(x => x.classList.toggle('on', x.dataset.tab === name));
   ['day', 'recap', 'study', 'week'].forEach(v => $(`#${v}View`).classList.toggle('hidden', v !== name));
-  document.body.classList.toggle('study-open', name === 'study');
-  if (name === 'study') openStudy();
+
   $('#fab').classList.toggle('hidden', name !== 'day');
   window.scrollTo(0, 0);
   render();
 }
-// The Study Week Planner is a separate app on the same site; it's loaded here on first use
-// and kept loaded so switching tabs doesn't reload it.
-function openStudy() {
-  const v = $('#studyView');
-  v.style.bottom = document.querySelector('nav.tabs').offsetHeight + 'px';
-  if (!v.firstChild) v.innerHTML = '<iframe src="../study-planner/" title="Study Week Planner"></iframe>';
-}
-window.addEventListener('resize', () => { if (tab === 'study') openStudy(); });
 function render() {
   renderStrip();
   renderDay();
   if (tab === 'week') renderWeek();
   if (tab === 'recap') renderRecap();
+  if (tab === 'study') renderStudy();
 }
 
 function renderStrip() {

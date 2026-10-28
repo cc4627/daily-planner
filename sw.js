@@ -1,7 +1,7 @@
 // Offline support. Pages load from the network when online (so updates show up
 // straight away) and fall back to the cache when offline. The inbox is never cached.
 // Only this app's own caches are cleared: the Study Week Planner shares this site.
-const CACHE = 'planner-v16';
+const CACHE = 'planner-v17';
 const FILES = ['./', 'index.html', 'manifest.json', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
