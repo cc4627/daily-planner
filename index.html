@@ -274,6 +274,7 @@ nav.tabs button.on { color: var(--accent); }
       <button class="btn" id="exportBtn">Export backup</button>
       <button class="btn" id="importBtn">Add plan or restore backup</button>
       <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+      <p class="hint" id="appVersion" style="text-align:center;margin-top:14px"></p>
     </div>
   </div>
 </section>
@@ -1296,7 +1297,20 @@ async function syncInbox() {
 syncInbox();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) syncInbox(); });
 
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js');
+// Updates: check for a new version whenever the app is opened or brought back, and reload
+// once when it has been installed so the new version shows straight away.
+const APP_VERSION = 18;
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !reloaded) { reloaded = true; location.reload(); }
+  });
+}
+$('#appVersion').textContent = `App version ${APP_VERSION}`;
 render();
 </script>
 </body>
