@@ -120,6 +120,9 @@ header .sub { display: block; font-size: 14px; font-weight: 500; color: var(--mu
 
 nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom); }
+#studyView { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top); bottom: 70px; background: #e8f2fc; }
+#studyView iframe { width: 100%; height: 100%; border: 0; display: block; }
+body.study-open { overflow: hidden; }
 nav.tabs button { flex: 1; padding: 10px 0 12px; font-size: 12px; font-weight: 600; color: var(--muted); }
 nav.tabs button span { display: block; font-size: 20px; }
 nav.tabs button.on { color: var(--accent); }
@@ -197,6 +200,8 @@ nav.tabs button.on { color: var(--accent); }
   </div>
 </section>
 
+<section id="studyView" class="hidden"></section>
+
 <section id="weekView" class="hidden">
   <header><h1>This week<span class="sub" id="weekRange"></span></h1></header>
   <div class="panel">
@@ -220,6 +225,7 @@ nav.tabs button.on { color: var(--accent); }
 <nav class="tabs">
   <button class="on" data-tab="day"><span>📅</span>Day</button>
   <button data-tab="recap"><span>📝</span>Recap</button>
+  <button data-tab="study"><span>📘</span>Study</button>
   <button data-tab="week"><span>📊</span>Week</button>
 </nav>
 
@@ -663,11 +669,21 @@ let tab = 'day';
 function showTab(name) {
   tab = name;
   document.querySelectorAll('nav.tabs button').forEach(x => x.classList.toggle('on', x.dataset.tab === name));
-  ['day', 'recap', 'week'].forEach(v => $(`#${v}View`).classList.toggle('hidden', v !== name));
+  ['day', 'recap', 'study', 'week'].forEach(v => $(`#${v}View`).classList.toggle('hidden', v !== name));
+  document.body.classList.toggle('study-open', name === 'study');
+  if (name === 'study') openStudy();
   $('#fab').classList.toggle('hidden', name !== 'day');
   window.scrollTo(0, 0);
   render();
 }
+// The Study Week Planner is a separate app on the same site; it's loaded here on first use
+// and kept loaded so switching tabs doesn't reload it.
+function openStudy() {
+  const v = $('#studyView');
+  v.style.bottom = document.querySelector('nav.tabs').offsetHeight + 'px';
+  if (!v.firstChild) v.innerHTML = '<iframe src="../study-planner/" title="Study Week Planner"></iframe>';
+}
+window.addEventListener('resize', () => { if (tab === 'study') openStudy(); });
 function render() {
   renderStrip();
   renderDay();
